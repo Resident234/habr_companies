@@ -89,8 +89,24 @@ go run ./operate
    ```cmd
    ngrok http 8080
    ```
-3. Используйте HTTPS-URL из вывода ngrok (например, `https://xxxx-xx-xx-xx-xx.ngrok-free.app`) как адрес API в Chrome-расширении.
+3. Используйте HTTPS-URL из вывода ngrok как адрес API в Chrome-расширении.
 4. Убедитесь, что Windows Firewall не блокирует входящие соединения для `ngrok.exe`.
+
+### Использование в Chrome-расширении
+
+**Конфигурация для расширения:**
+- **Базовый URL**: `https://xxxx-xx-xxx.ngrok-free.dev` (получить из вывода ngrok)
+- **Endpoint**: `POST /company/add/{code}/{title}`
+- **Заголовок аутентификации**: `X-API-Key: <ваш-секретный-ключ-из-.env>`
+
+**Пример запроса:**
+```bash
+curl -X POST \
+  "https://xxxx-xx-xxx.ngrok-free.dev/company/add/yandex/%D0%AF%D0%BD%D0%B4%D0%B5%D0%BA%D1%81" \
+  -H "X-API-Key: your-api-key-here"
+```
+
+**Веб-интерфейс ngrok:** http://localhost:4040 (просмотр трафика и логов)
 
 ## Тестирование
 
