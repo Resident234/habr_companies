@@ -1,0 +1,175 @@
+{
+  "info": {
+    "_postman_id": "companies-rest-api-collection",
+    "name": "Companies REST API",
+    "description": "Postman collection for the Companies REST API service running on ngrok.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      { "key": "key", "value": "X-API-Key", "type": "string" },
+      { "key": "value", "value": "{{api_key}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "base_url", "value": "https://glucose-banking-maximize.ngrok-free.dev" },
+    { "key": "api_key", "value": "YOUR_COMPANY_API_KEY_HERE" },
+    { "key": "code", "value": "yandex" },
+    { "key": "title", "value": "Яндекс" }
+  ],
+  "item": [
+    {
+      "name": "Create Company",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status is 201 or 200\", function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "});",
+              "pm.test(\"Response has code and title\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('code');",
+              "    pm.expect(json).to.have.property('title');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/company/add/{{code}}/{{title}}",
+          "host": ["{{base_url}}"],
+          "path": ["company", "add", "{{code}}", "{{title}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Update Company",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status is 200\", function () {",
+              "    pm.expect(pm.response.code).to.eql(200);",
+              "});",
+              "pm.test(\"Response has code and title\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('code');",
+              "    pm.expect(json).to.have.property('title');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/company/add/{{code}}/{{title}}",
+          "host": ["{{base_url}}"],
+          "path": ["company", "add", "{{code}}", "{{title}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Invalid Code",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status is 400\", function () {",
+              "    pm.expect(pm.response.code).to.eql(400);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/company/add/bad code/{{title}}",
+          "host": ["{{base_url}}"],
+          "path": ["company", "add", "bad code", "{{title}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Missing API Key",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status is 401\", function () {",
+              "    pm.expect(pm.response.code).to.eql(401);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/company/add/{{code}}/{{title}}",
+          "host": ["{{base_url}}"],
+          "path": ["company", "add", "{{code}}", "{{title}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Wrong API Key",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status is 401\", function () {",
+              "    pm.expect(pm.response.code).to.eql(401);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "wrong-key",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/company/add/{{code}}/{{title}}",
+          "host": ["{{base_url}}"],
+          "path": ["company", "add", "{{code}}", "{{title}}"]
+        }
+      },
+      "response": []
+    }
+  ]
+}
