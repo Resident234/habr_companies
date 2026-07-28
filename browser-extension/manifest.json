@@ -1,6 +1,6 @@
 {
     "action": {
-        "default_title": "Highbrighter",
+        "default_title": "Habr Companies",
         "default_popup": "views/popup.html",
         "default_icon": "icons/highlighter48.png"
     },
@@ -31,7 +31,7 @@
         "96": "icons/highlighter96.png"
     },
     "manifest_version": 3,
-    "name": "Highbrighter",
+    "name": "Habr Companies",
     "omnibox": {
         "keyword": "highbrighter"
     },
