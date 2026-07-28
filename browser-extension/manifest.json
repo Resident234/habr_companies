@@ -20,7 +20,8 @@
             ],
             "css": [
                 "content/index.css"
-            ]
+            ],
+            "type": "module"
         }
     ],
     "default_locale": "en",
@@ -49,7 +50,8 @@
     "web_accessible_resources": [
         {
             "resources": [
-                "content_scripts/*.js"
+                "content_scripts/*.js",
+                "config.js"
             ],
             "matches": [
                 "*://*/*"

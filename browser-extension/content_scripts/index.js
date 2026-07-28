@@ -1,5 +1,6 @@
 (async () => {
-    const { HabrCompanyExtractor } = await import('./habrCompanyExtractor.js'); 
+    const moduleUrl = chrome.runtime.getURL('content_scripts/habrCompanyExtractor.js');
+    const { HabrCompanyExtractor } = await import(moduleUrl);
     const extractor = new HabrCompanyExtractor();
     await extractor.init();
 })();
