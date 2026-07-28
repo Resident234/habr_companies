@@ -1,0 +1,11 @@
+html, body {
+    width: 270px;
+}
+
+.panel {
+    margin: 5px;
+}
+
+.icon img {
+    margin-right: 5px;	
+}

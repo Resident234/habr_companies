@@ -1,0 +1,26 @@
+{
+    "preferences": {
+        "message": "Настройки",
+        "description": "Title for a context menu item relocating to the preferences page"
+    },
+
+    "preferences_api_url_label": {
+        "message": "URL сервиса API:",
+        "description": "Label for the API service URL input field"
+    },
+
+    "preferences_api_url_input": {
+        "message": "https://api.example.com",
+        "description": "Placeholder for the API service URL input field"
+    },
+
+    "preferences_save_btn": {
+        "message": "Сохранить",
+        "description": "Label for a button saving all the preferences"
+    },
+
+    "description": {
+        "message": "Извлекает информацию о компаниях со страниц Habr и отправляет её в настроенный сервис.",
+        "description": "Description of the extension from manifest.json"
+    }
+}

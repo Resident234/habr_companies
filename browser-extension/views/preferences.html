@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <link href="../content/preferences.css" rel="stylesheet" />
+    </head>
+    <body>
+        <form>
+            <div id="form--section-api">
+                <label class="locale form--section-header" id="preferences-api-url-label">
+                    API Service URL:
+                </label>
+                <div class="form-section-separated">
+                    <input type="text" class="locale" id="form--section-api--txt-url" 
+                        name="preferences-api-url-input" 
+                        placeholder="https://api.example.com" />
+                </div>
+            </div>
+            <hr />
+
+            <button class="locale" name="preferences-save-btn" type="submit" id="form--btn-submit" disabled>
+                Save
+            </button>
+        </form>
+        
+        <script type="module" src="../background_scripts/preferencesInitialisation.js"></script>
+    </body>
+</html>

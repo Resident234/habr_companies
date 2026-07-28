@@ -1,0 +1,59 @@
+{
+    "action": {
+        "default_title": "Highbrighter",
+        "default_popup": "views/popup.html",
+        "default_icon": "icons/highlighter48.png"
+    },
+    "author": "Resident234",
+    "background": {
+        "service_worker": "background_scripts/menuInitialisation.js",
+        "type": "module"
+    },
+    "content_security_policy": {},
+    "content_scripts": [
+        {
+            "matches": [
+                "*://*/*"
+            ],
+            "js": [
+                "content_scripts/index.js"
+            ],
+            "css": [
+                "content/index.css"
+            ]
+        }
+    ],
+    "default_locale": "en",
+    "description": "__MSG_description__",
+    "homepage_url": "https://github.com/Resident234/habr_companies",
+    "icons": {
+        "48": "icons/highlighter48.png",
+        "96": "icons/highlighter96.png"
+    },
+    "manifest_version": 3,
+    "name": "Highbrighter",
+    "omnibox": {
+        "keyword": "highbrighter"
+    },
+    "options_ui": {
+        "page": "views/preferences.html",
+        "open_in_tab": false
+    },
+    "permissions": [
+        "activeTab",
+        "contextMenus",
+        "storage",
+        "unlimitedStorage"
+    ],
+    "version": "2.0.1",
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "content_scripts/*.js"
+            ],
+            "matches": [
+                "*://*/*"
+            ]
+        }
+    ]
+}
