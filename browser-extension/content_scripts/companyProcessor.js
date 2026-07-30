@@ -45,13 +45,13 @@ export class CompanyProcessor {
             }
 
             console.log('[CompanyProcessor.init] Calling API client sendCompany with code:', code, 'title:', title);
-            const responseText = await this._apiClient.sendCompany(code, title);
-            console.log('[CompanyProcessor.init] API response:', responseText);
+            const result = await this._apiClient.sendCompany(code, title);
+            console.log('[CompanyProcessor.init] API response:', result);
 
-            MessageControl.show(responseText);
+            MessageControl.show(result.message, result.type);
         } catch (error) {
             console.error('[CompanyProcessor.init] Error:', error);
-            MessageControl.show('Error: ' + error.message);
+            MessageControl.show(error.message, 'error');
         }
     }
 

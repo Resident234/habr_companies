@@ -52,10 +52,16 @@ export class CompanyApiClient {
             if (response.error) throw new Error(response.error);
 
             if (!response.ok) {
-                return `Error ${response.status} for company "${code}": ${response.body}`;
+                return {
+                    message: `Ошибка добавления компании: title[${title}], code[${code}], status[${response.status}]`,
+                    type: 'error'
+                };
             }
 
-            return `Company "${code}": ${response.body}`;
+            return {
+                message: `Компания добавлена успешно: title[${title}], code[${code}]`,
+                type: 'success'
+            };
         } catch (error) {
             console.error('[CompanyApiClient.sendCompany] Fetch failed:', error);
             throw new Error(`Could not send query for company "${code}" to ${url}`);

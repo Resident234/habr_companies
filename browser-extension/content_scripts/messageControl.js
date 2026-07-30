@@ -1,74 +1,45 @@
+import { CONFIG } from '../config.js';
+
 export class MessageControl {
-    static get BLANKET_PARAGRAPH_ELEM_ID() {
-        return MessageControl.BLANKET_ELEM_ID + '--paragraph';
+    static get BAR_ID() {
+        return 'habr-companies-bar';
     }
 
-    static get BLANKET_ELEM_ID() {
-        return 'blanket';
-    }
+    static show(text, type = 'info') {
+        if (!text) return;
 
-    static show(text) {
-        if (!text)
-            return;
+        const existing = MessageControl._existentBar;
+        if (existing) {
+            existing.remove();
+            clearTimeout(MessageControl._dismissTimer);
+        }
 
-        let paragraph;
+        const bar = MessageControl._buildBar(text, type);
+        document.documentElement.append(bar);
 
-        const blanket = MessageControl._existentBlanket;
-
-        if (blanket)
-            blanket.className = '';
-        else
-            document.documentElement.append(MessageControl._constructBlanket(text));
-            
-        if (!(paragraph = MessageControl._existentParagraph))
-            blanket.append(MessageControl._appendParagraph(text));
-
-        paragraph.innerHTML = text;
-    }
-
-    static get _existentBlanket() {
-        return document.getElementById(MessageControl.BLANKET_ELEM_ID);    
-    }
-
-    static _constructBlanket(text) {
-        const blanket = document.createElement('div');
-        blanket.id = MessageControl.BLANKET_ELEM_ID;
-
-        blanket.append(MessageControl._appendParagraph(text));
-        return blanket;
-    }
-
-    static _appendParagraph(text) {
-        const paragraph = document.createElement('p');
-        paragraph.id = MessageControl.BLANKET_PARAGRAPH_ELEM_ID;
-        paragraph.innerHTML = text;
-        
-        return paragraph;
-    }
-
-    static get _existentParagraph() {
-        return document.getElementById(MessageControl.BLANKET_PARAGRAPH_ELEM_ID);
+        MessageControl._dismissTimer = setTimeout(
+            () => MessageControl.hide(),
+            CONFIG.MESSAGE_DISPLAY_DURATION
+        );
     }
 
     static hide() {
-        const blanket = MessageControl._existentBlanket;
+        const bar = MessageControl._existentBar;
+        if (!bar) return;
 
-        if (!blanket || blanket.className !== '')
-            return Promise.resolve();
-
-        return MessageControl._applyAnimation(blanket, 'disappear')
-            .then(ctrl => MessageControl._applyAnimation(ctrl, 'leave'));
+        bar.classList.add('habr-companies-bar--hidden');
+        bar.addEventListener('transitionend', () => bar.remove(), { once: true });
     }
 
-    static _applyAnimation(elem, animationName) {
-        return new Promise((resolve, reject) => {
-            setTimeout(() => {
-                if (!elem)
-                    return reject(new Error(`An element to apply animation ${animationName} is undefined`));
+    static get _existentBar() {
+        return document.getElementById(MessageControl.BAR_ID);
+    }
 
-                elem.classList.add(elem.id + '-' + animationName);
-                resolve(elem);
-            }, 1000);
-        });
+    static _buildBar(text, type) {
+        const bar = document.createElement('div');
+        bar.id = MessageControl.BAR_ID;
+        bar.className = `habr-companies-bar habr-companies-bar--${type}`;
+        bar.textContent = text;
+        return bar;
     }
 }
