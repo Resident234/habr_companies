@@ -16,21 +16,31 @@ export class CompanyApiClient {
         console.log('[CompanyApiClient.sendCompany] API Key (first 4 chars):', CONFIG.API_KEY.substring(0, 4) + '...');
 
         console.log('[CompanyApiClient.sendCompany] Sending POST request...');
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'X-API-Key': CONFIG.API_KEY,
-                'Content-Type': 'application/json'
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-API-Key': CONFIG.API_KEY,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            console.log('[CompanyApiClient.sendCompany] Response status:', response.status, response.statusText);
+            console.log('[CompanyApiClient.sendCompany] Response ok:', response.ok);
+
+            const data = await response.text();
+            console.log('[CompanyApiClient.sendCompany] Response body:', data);
+
+            if (!response.ok) {
+                return `Error ${response.status} for company "${code}": ${data}`;
             }
-        });
 
-        console.log('[CompanyApiClient.sendCompany] Response status:', response.status, response.statusText);
-        console.log('[CompanyApiClient.sendCompany] Response ok:', response.ok);
-
-        const data = await response.text();
-        console.log('[CompanyApiClient.sendCompany] Response body:', data);
-
-        return `Service response: ${data}`;
+            return `Company "${code}": ${data}`;
+        } catch (error) {
+            console.error('[CompanyApiClient.sendCompany] Fetch failed:', error);
+            throw new Error(`Could not send query for company "${code}" to ${url}`);
+        }
     }
 
     async _getBaseUrl() {

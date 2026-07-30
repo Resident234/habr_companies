@@ -6,14 +6,13 @@ export class CompanyExtractor {
 
         const patternUrl = new URL(CONFIG.URL_PATTERN);
         const patternParts = patternUrl.pathname.split('/').filter(Boolean);
-        const segment = patternParts[patternParts.length - 1];
-
         const pathParts = window.location.pathname.split('/').filter(Boolean);
-        const segmentIndex = pathParts.indexOf(segment);
-        console.log('[CompanyExtractor.extractCode] Path parts:', pathParts, '| Looking for segment:', segment, '| Found at index:', segmentIndex);
 
-        if (segmentIndex !== -1 && pathParts[segmentIndex + 1]) {
-            const code = pathParts[segmentIndex + 1];
+        const wildcardIndex = patternParts.indexOf('*');
+        console.log('[CompanyExtractor.extractCode] Path parts:', pathParts, '| Wildcard index in pattern:', wildcardIndex);
+
+        if (wildcardIndex !== -1 && pathParts[wildcardIndex]) {
+            const code = pathParts[wildcardIndex];
             console.log('[CompanyExtractor.extractCode] Code extracted:', code);
             return code;
         }
