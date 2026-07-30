@@ -40,6 +40,9 @@
         "page": "views/preferences.html",
         "open_in_tab": false
     },
+    "host_permissions": [
+        "*://*/*"
+    ],
     "permissions": [
         "activeTab",
         "contextMenus",
