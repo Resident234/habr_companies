@@ -7,9 +7,15 @@ export class CompanyApiClient {
     }
 
     async sendCompany(code, title) {
+        console.log('[CompanyApiClient.sendCompany] Called with code:', code, 'title:', title);
+
         const baseUrl = await this._getBaseUrl();
         const url = `${baseUrl}/company/add/${encodeURIComponent(code)}/${encodeURIComponent(title)}`;
+        console.log('[CompanyApiClient.sendCompany] Base URL:', baseUrl);
+        console.log('[CompanyApiClient.sendCompany] Full request URL:', url);
+        console.log('[CompanyApiClient.sendCompany] API Key (first 4 chars):', CONFIG.API_KEY.substring(0, 4) + '...');
 
+        console.log('[CompanyApiClient.sendCompany] Sending POST request...');
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -18,7 +24,12 @@ export class CompanyApiClient {
             }
         });
 
+        console.log('[CompanyApiClient.sendCompany] Response status:', response.status, response.statusText);
+        console.log('[CompanyApiClient.sendCompany] Response ok:', response.ok);
+
         const data = await response.text();
+        console.log('[CompanyApiClient.sendCompany] Response body:', data);
+
         return `Service response: ${data}`;
     }
 
