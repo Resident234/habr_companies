@@ -12,6 +12,28 @@
 - **Настройка адреса сервиса** — URL сервиса можно изменить на странице настроек расширения
 - **Автоматический запуск** — запрос отправляется после полной загрузки страницы
 
+## Архитектура
+
+Логика расширения разделена на три класса, каждый из которых отвечает за свою зону ответственности:
+
+| Класс | Файл | Ответственность |
+|---|---|---|
+| `CompanyExtractor` | `content_scripts/companyExtractor.js` | Извлечение данных из URL и DOM: извлечение кода компании из URL (`extractCode`), извлечение названия компании из DOM (`extractTitle`). Все методы статические — не зависит от браузерного storage и не выполняет сетевых запросов. |
+| `CompanyApiClient` | `content_scripts/companyApiClient.js` | Отправка данных по REST API: получает код и название компании, читает base URL из настроек (`BrowserStorage`), выполняет POST-запрос к сервису. |
+| `CompanyProcessor` | `content_scripts/companyProcessor.js` | Оркестратор (точка входа): ждёт загрузки страницы, проверяет корректность URL, извлекает данные через `CompanyExtractor.extractCode()` / `extractTitle()`, передаёт их в `CompanyApiClient.sendCompany()`, отображает результат через `MessageControl`. |
+
+### Поток данных
+
+```
+CompanyProcessor (оркестратор)
+    │
+    ├── CompanyExtractor (статические методы) → { code, title }
+    │
+    └── CompanyApiClient.sendCompany(code, title) → responseText
+            │
+            └── BrowserStorage (base URL из настроек)
+```
+
 ## Конфигурация
 
 Параметры задаются в файле `config.js`:
@@ -35,7 +57,9 @@ browser-extension/
 ├── manifest.json                                # Манифест расширения (v3)
 ├── content_scripts/
 │   ├── index.js                                 # Точка входа content-скрипта
-│   ├── habrCompanyExtractor.js                  # Основная бизнес-логика
+│   ├── companyProcessor.js                      # Оркестратор (проверка страницы → извлечение → отправка → показ)
+│   ├── companyExtractor.js                      # Извлечение данных из URL и DOM
+│   ├── companyApiClient.js                      # Отправка данных по REST API
 │   ├── browserAPI.js                            # Обёртка над browser API
 │   ├── browserStorage.js                        # Работа с chrome.storage.local
 │   └── messageControl.js                        # Всплывающие сообщения
