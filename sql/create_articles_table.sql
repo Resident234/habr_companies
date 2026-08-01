@@ -15,9 +15,11 @@ CREATE TABLE articles (
     stats_counter VARCHAR(255),
     hub INT,
     label INT,
+    company VARCHAR(255),
     score_counter INT,
     bookmarks_counter INT,
     comments_counter INT,
     FOREIGN KEY (hub) REFERENCES hubs(id),
-    FOREIGN KEY (label) REFERENCES labels(id)
+    FOREIGN KEY (label) REFERENCES labels(id),
+    FOREIGN KEY (company) REFERENCES companies(code)
 );
