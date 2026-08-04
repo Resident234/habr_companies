@@ -426,6 +426,20 @@ class Crawler:
         stats.stats_max('max queue size', self.scheduler.qsize())
         stats.stats_set('ridealong size', self.scheduler.ridealong_size())
 
+        # Habr mode: persist per-company progress so a later run can resume
+        # from last_processed_article_id + 1 instead of re-crawling the
+        # whole range. Only reached for final outcomes (2xx, redirect,
+        # unretryable 4xx/1xx) -- retried items return earlier.
+        if self.habr_mode and 'company_code' in ridealong and 'article_id' in ridealong:
+            try:
+                await db.update_company_progress(
+                    ridealong['company_code'], ridealong['article_id'])
+            except Exception as e:
+                LOGGER.error('failed to save progress for company %s '
+                             'article %s: %s',
+                             ridealong['company_code'],
+                             ridealong['article_id'], e)
+
         if self.crawllogfd:
             print(json.dumps(json_log, sort_keys=True), file=self.crawllogfd)
 

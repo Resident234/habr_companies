@@ -44,12 +44,30 @@ class HabrSeedGenerator:
             LOGGER.error('no companies found in database, nothing to crawl')
             self.exhausted = True
             return
-        # Initialize round-robin state: each company starts at id_start
-        self.company_order = list(self.companies)
-        self.company_next_ids = {c: self.id_start for c in self.companies}
+        # Initialize round-robin state. Each company continues from its
+        # saved progress (last_processed_article_id + 1), falling back to
+        # id_start for companies never crawled before.
+        resumed = 0
+        self.company_order = []
+        self.company_next_ids = {}
+        for code, last_processed in self.companies:
+            if last_processed is not None:
+                next_id = int(last_processed) + 1
+                resumed += 1
+            else:
+                next_id = self.id_start
+            if next_id <= self.id_end:
+                self.company_order.append(code)
+                self.company_next_ids[code] = next_id
         self.rr_index = 0
-        LOGGER.info('seeding %d companies, article ids %d..%d (round-robin)',
-                    len(self.companies), self.id_start, self.id_end)
+        if not self.company_order:
+            LOGGER.warning('all companies are already fully crawled '
+                           '(up to id %d)', self.id_end)
+            self.exhausted = True
+            return
+        LOGGER.info('seeding %d companies (resumed %d from saved progress), '
+                    'article ids %d..%d (round-robin)',
+                    len(self.company_order), resumed, self.id_start, self.id_end)
         self._queue_batch()
 
     def _next_company_round_robin(self):

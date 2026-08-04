@@ -57,16 +57,35 @@ async def close_pool():
 
 async def get_companies():
     '''
-    Returns a list of company codes from the companies table.
+    Returns a list of (company_code, last_processed_article_id) tuples
+    from the companies table. last_processed_article_id is None for
+    companies that have not been crawled yet.
     '''
     pool = await init_pool()
     async with pool.acquire() as conn:
         async with conn.cursor() as cur:
-            await cur.execute('SELECT code FROM companies')
+            await cur.execute(
+                'SELECT code, last_processed_article_id FROM companies')
             rows = await cur.fetchall()
-    companies = [r[0] for r in rows]
+    companies = [(r[0], r[1]) for r in rows]
     LOGGER.info('loaded %d companies from database', len(companies))
     return companies
+
+
+async def update_company_progress(code, article_id):
+    '''
+    Record the article_id last processed for a company. Uses GREATEST so a
+    concurrently processed lower article_id can never roll the progress back.
+    '''
+    pool = await init_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                'UPDATE companies '
+                'SET last_processed_article_id = '
+                '    GREATEST(COALESCE(last_processed_article_id, 0), %s) '
+                'WHERE code = %s',
+                (article_id, code))
 
 
 async def _get_or_create(table, code, title, cache):
