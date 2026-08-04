@@ -2,6 +2,11 @@
 .env
 **/.env
 
+# IDE
+.idea/
+.vscode/
+.kilo/
+
 # Go binaries
 *.exe
 *.exe~
