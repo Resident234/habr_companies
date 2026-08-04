@@ -25,6 +25,12 @@ async def init_pool():
     global _pool
     if _pool is not None:
         return _pool
+    min_pool_size = int(config.read('Database', 'MinPoolSize') or 1)
+    max_pool_size = int(config.read('Database', 'MaxPoolSize') or 10)
+    if max_pool_size < min_pool_size:
+        raise ValueError(
+            'Database.MaxPoolSize ({}) must be >= Database.MinPoolSize ({})'
+            .format(max_pool_size, min_pool_size))
     _pool = await aiomysql.create_pool(
         host=config.read('Database', 'Host'),
         port=int(config.read('Database', 'Port') or 3306),
@@ -33,10 +39,11 @@ async def init_pool():
         db=config.read('Database', 'Name'),
         charset='utf8mb4',
         autocommit=True,
-        minsize=1,
-        maxsize=10,
+        minsize=min_pool_size,
+        maxsize=max_pool_size,
     )
-    LOGGER.info('MySQL pool created for db %s', config.read('Database', 'Name'))
+    LOGGER.info('MySQL pool created for db %s (min=%d, max=%d)',
+                config.read('Database', 'Name'), min_pool_size, max_pool_size)
     return _pool
 
 

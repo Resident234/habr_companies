@@ -128,6 +128,8 @@ Database:
   User: root
   Password: ''
   Name: habr
+  MinPoolSize: 1  # minimum MySQL pool connections
+  MaxPoolSize: 10  # maximum MySQL pool connections
 
 Habr:
   Enabled: False

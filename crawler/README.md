@@ -56,6 +56,8 @@ Database:
   User: root
   Password: ''
   Name: habr
+  MinPoolSize: 1         # минимальный размер пула MySQL
+  MaxPoolSize: 10        # максимальный размер пула MySQL
 
 Habr:
   Enabled: True
@@ -69,6 +71,15 @@ Crawl:
   MaxHostQPS: 2          # запросов в секунду на хост (вежливость)
   MaxTries: 3
 ```
+
+Описание параметров параллелизма:
+
+| Параметр         | Где используется | По умолчанию | Описание |
+|------------------|------------------|--------------|----------|
+| `Crawl.MaxWorkers`  | `habrcrawler/__init__.py` | 10 | Число asyncio-воркеров, параллельно выполняющих полный цикл (DNS, robots, HTTP, парсинг, запись в БД) |
+| `Crawl.MaxHostQPS`  | `habrcrawler/scheduler.py` | 10 | Максимум запросов в секунду на один хост (вежливость); планировщик сам расставляет задержки между запросами |
+| `Database.MinPoolSize` | `habrcrawler/db.py` | 1 | Минимальный размер пула соединений aiomysql |
+| `Database.MaxPoolSize` | `habrcrawler/db.py` | 10 | Максимальный размер пула соединений aiomysql; должен быть `>= MinPoolSize` |
 
 Схему БД см. в `../sql/` (`create_articles_table.sql`,
 `create_companies_table.sql`, `create_article_hubs_table.sql`).

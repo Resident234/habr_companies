@@ -7,6 +7,8 @@ Database:
   User: root
   Password: root
   Name: habr_companies
+  MinPoolSize: 1   # минимальный размер пула MySQL
+  MaxPoolSize: 10  # максимальный размер пула MySQL
 
 Habr:
   Enabled: True
