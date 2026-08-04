@@ -230,5 +230,14 @@ reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v HabrCompanies
 ```sql
 CREATE TABLE companies (
     code VARCHAR(255) PRIMARY KEY,
-    title VARCHAR(255) NOT NULL
+    title VARCHAR(255) NOT NULL,
+    last_processed_article_id BIGINT UNSIGNED NULL DEFAULT NULL
 );
+```
+
+Колонка `last_processed_article_id` хранит прогресс обхода краулера
+(последний обработанный `article_id` по каждой компании). Для
+существующих баз её можно добавить скриптом
+`sql/add_last_processed_article_id_to_companies.sql` (или вручную:
+`ALTER TABLE companies ADD COLUMN last_processed_article_id BIGINT UNSIGNED NULL DEFAULT NULL;`).
+Rest-api эта колонка не трогает — она используется только краулером.
