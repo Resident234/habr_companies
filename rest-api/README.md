@@ -154,63 +154,74 @@ go test -tags=integration ./...
 
 ## Автозагрузка при старте Windows
 
-Скрипты в папке `scripts/` настраивают автоматический запуск rest-api + ngrok при входе в систему через папку **Startup**. Прав администратора не требуется.
+Для запуска rest-api + ngrok при старте Windows используется `scripts/start_all.ps1`.
+Варианты ниже подходят для этого скрипта. Ни один из них не требует прав администратора.
 
-### Подготовка
+> **Нюансы:** пути в автозагрузке абсолютные — не переносите проект в другую папку после настройки.
+> Скрипт сам находит `.env`, собирает `rest-api.exe` (если бинарника нет) и скачивает ngrok —
+> дополнительная подготовка не нужна. При старте он останавливает предыдущие процессы rest-api/ngrok,
+> поэтому конфликтов портов не бывает.
 
-1. **Установите ngrok**, если ещё не установлен:
-   ```cmd
-   scoop install ngrok
+### Вариант 1 — Папка автозагрузки (проще всего)
+
+Запуск при входе в систему текущего пользователя.
+
+1. Нажмите `Win+R`, введите `shell:startup` и нажмите Enter.
+2. Создайте в открывшейся папке файл `start_all.bat` с содержимым:
+   ```bat
+   @echo off
+   start "" /MIN powershell -NoProfile -ExecutionPolicy Bypass -File "H:\s\Work_habr_companies\rest-api\scripts\start_all.ps1"
    ```
-   или скачайте с [ngrok.com/download](https://ngrok.com/download).  
-   Укажите путь к `ngrok.exe` в `scripts/start_service.ps1` (переменная `$NGROK_EXE`).
+   В Блокноте: «Сохранить как» → тип файла «Все файлы».
+3. Готово. При входе в Windows скрипт запустится свёрнутым. Окно PowerShell остаётся открытым —
+   это нормально, цикл keep-alive скрипта держит сервисы.
 
-2. **Соберите исполняемый файл**:
-   ```cmd
-   .\scripts\build.bat
+### Вариант 2 — Планировщик задач (рекомендуется)
+
+Позволяет запускать сервис даже без входа пользователя в систему (при включении ПК).
+
+1. Нажмите `Win+R`, введите `taskschd.msc` и нажмите Enter.
+2. В правой панели выберите «Создать задачу…».
+3. Вкладка **Общие**: имя `HabrCompanies`, отметьте «Выполнять с наивысшими правами».
+4. Вкладка **Триггеры** → «Создать…»: выберите «При запуске компьютера»
+   (или «При входе в систему», если сервис нужен только залогиненному пользователю).
+5. Вкладка **Действия** → «Создать…»: программа `powershell`, аргументы:
    ```
-   Будет создан `rest-api.exe` в корне проекта. Бинарник не требует Go для запуска.
+   -NoProfile -ExecutionPolicy Bypass -File "H:\s\Work_habr_companies\rest-api\scripts\start_all.ps1"
+   ```
+6. Вкладка **Условия**: для стационарного ПК снимите «Запускать только при питании от электросети».
+7. Нажмите **OK**. Если выбраны «При запуске компьютера» и «Выполнять независимо от регистрации
+   пользователя» — Windows запросит пароль учётной записи.
 
-### Установка автозагрузки
+### Вариант 3 — Реестр (одна команда)
 
-Запустите PowerShell (обычный, без прав администратора):
+Запуск при входе в систему текущего пользователя.
 
+Добавить в автозагрузку:
 ```powershell
-.\scripts\setup_autostart.ps1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v HabrCompanies /t REG_SZ /d "powershell -NoProfile -ExecutionPolicy Bypass -File \"H:\s\Work_habr_companies\rest-api\scripts\start_all.ps1\"" /f
 ```
 
-Скрипт скопирует `scripts/start_rest_api.vbs` в папку `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup`.
+Удалить из автозагрузки:
+```powershell
+reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v HabrCompanies /f
+```
 
-**Как это работает:**
-1. При входе в систему Windows запускает `RestApiWithNgrok.vbs` из Startup.
-2. VBS-скрипт неявно (скрытое окно) запускает `start_service.ps1`.
-3. `start_service.ps1` запускает `rest-api.exe` + `ngrok http 8080`.
-
-### Проверка
-
-Перезагрузите Windows (или выполните `logoff` / `logon`) и убедитесь, что:
+### Проверка после перезагрузки
 
 - Сервер доступен локально:
   ```cmd
   curl http://localhost:8080
   ```
 - Веб-интерфейс ngrok открывается в браузере по адресу http://localhost:4040.
-- HTTPS-URL из ngrok можно использовать в Chrome-расширении.
-
-### Удаление автозагрузки
-
-```powershell
-.\scripts\setup_autostart.ps1 -Unregister
-```
+- Свежая запись в логе туннеля: `%TEMP%\ngrok_startall.log`.
+- HTTPS-URL из вывода ngrok можно использовать в Chrome-расширении.
 
 ### Прочие скрипты
 
 | Скрипт | Назначение |
 |--------|-----------|
-| `scripts/build.bat` | Компилирует `rest-api.exe` из `./operate` |
-| `scripts/start_service.ps1` | Запускает `rest-api.exe` и `ngrok http 8080` |
-| `scripts/start_rest_api.vbs` | VBS-обёртка для скрытого запуска PowerShell через Startup |
-| `scripts/setup_autostart.ps1` | Устанавливает/удаляет VBS из папки Startup |
+| `scripts/start_all.ps1` | Запускает rest-api + ngrok одной командой (см. [Внешний доступ](#внешний-доступ-ngrok)) |
 
 ## База данных
 
