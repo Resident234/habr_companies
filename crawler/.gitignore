@@ -1,0 +1,8 @@
+.cache
+*.pyc
+__pycache__
+.coverage
+examples/
+build/
+dist/
+habrcrawler.egg-info/

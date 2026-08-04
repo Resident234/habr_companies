@@ -1,0 +1,30 @@
+root: True
+
+# Параметры подключения к MySQL (замените на реальные)
+Database:
+  Host: localhost
+  Port: 3306
+  User: root
+  Password: root
+  Name: habr_companies
+
+Habr:
+  Enabled: True
+  ArticleIdStart: 1
+  ArticleIdEnd: 10000000
+  UrlTemplate: 'https://habr.com/ru/companies/{company}/articles/{article_id}/'
+  SeedBatchSize: 20000
+
+Crawl:
+  MaxWorkers: 10
+  MaxHostQPS: 2
+  MaxTries: 3
+  PageTimeout: 30.
+
+UserAgent:
+  Style: laptopplus
+  MyPrefix: habrcompanies
+  URL: https://github.com/Resident234/habr_companies
+
+Logging:
+  LoggingLevel: INFO
