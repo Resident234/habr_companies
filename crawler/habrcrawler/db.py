@@ -113,31 +113,60 @@ async def _get_or_create(table, code, title, cache):
 
 
 async def get_or_create_hub(code, title):
-    return await _get_or_create('hubs', code, title, _hub_cache)
-
-
-async def get_or_create_label(code, title):
     '''
-    The labels table has no `code` column (only id + title), so we look
-    up by title. `code` is kept in the signature for API symmetry and
-    logging.
+    Find hub by code; insert if missing. Returns hub code (string).
+    Hubs table uses `code` as primary key, so we return the code itself
+    rather than a numeric id.
     '''
-    if title in _label_cache:
-        return _label_cache[title]
+    if code in _hub_cache:
+        return _hub_cache[code]
 
     pool = await init_pool()
     async with pool.acquire() as conn:
         async with conn.cursor() as cur:
-            await cur.execute('SELECT id FROM labels WHERE title = %s', (title,))
+            await cur.execute('SELECT code FROM hubs WHERE code = %s', (code,))
             row = await cur.fetchone()
             if row:
-                _label_cache[title] = row[0]
+                _hub_cache[code] = row[0]
                 return row[0]
-            await cur.execute('INSERT INTO labels (title) VALUES (%s)', (title,))
-            _label_cache[title] = cur.lastrowid
+            await cur.execute(
+                'INSERT INTO hubs (code, title) VALUES (%s, %s)',
+                (code, title))
+            _hub_cache[code] = code
+            stats.stats_sum('hubs created', 1)
+            LOGGER.info('created hub: code=%s title=%s', code, title)
+            return code
+
+
+async def get_or_create_label(code, title):
+    '''
+    Ensure a label row exists and return its code (string).
+    Labels table now uses `code` as primary key. If `code` is missing,
+    derive a safe code from the title.
+    '''
+    # Normalize/derive code
+    code = (code or '').strip()
+    if not code:
+        # derive from title: lowercase, replace non-word with underscore
+        import re
+        code = re.sub(r'\W+', '_', (title or '').strip().lower())
+
+    if code in _label_cache:
+        return _label_cache[code]
+
+    pool = await init_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute('SELECT code FROM labels WHERE code = %s', (code,))
+            row = await cur.fetchone()
+            if row:
+                _label_cache[code] = row[0]
+                return row[0]
+            await cur.execute('INSERT INTO labels (code, title) VALUES (%s, %s)', (code, title))
+            _label_cache[code] = code
             stats.stats_sum('labels created', 1)
             LOGGER.info('created label: code=%s title=%s', code, title)
-            return cur.lastrowid
+            return code
 
 
 
@@ -154,10 +183,10 @@ async def insert_article(article_id, title, stats_counter, label_id,
             try:
                 await cur.execute(
                     'INSERT INTO articles '
-                    '(id, title, stats_counter, hub, label, company, '
+                    '(id, title, stats_counter, label, company, '
                     ' score_counter, bookmarks_counter, comments_counter) '
-                    'VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)',
-                    (article_id, title, stats_counter, None, label_id,
+                    'VALUES (%s, %s, %s, %s, %s, %s, %s, %s)',
+                    (article_id, title, stats_counter, label_id,
                      company_code, score_counter, bookmarks_counter,
                      comments_counter))
                 stats.stats_sum('articles inserted', 1)
@@ -169,11 +198,11 @@ async def insert_article(article_id, title, stats_counter, label_id,
                 raise
 
 
-async def link_article_hub(article_id, hub_id):
+async def link_article_hub(article_id, hub_code):
     pool = await init_pool()
     async with pool.acquire() as conn:
         async with conn.cursor() as cur:
             await cur.execute(
-                'INSERT IGNORE INTO article_hubs (article_id, hub_id) '
+                'INSERT IGNORE INTO article_hubs (article_id, hub_code) '
                 'VALUES (%s, %s)',
-                (article_id, hub_id))
+                (article_id, hub_code))

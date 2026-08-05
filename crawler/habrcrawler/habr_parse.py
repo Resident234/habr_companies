@@ -141,16 +141,16 @@ async def parse_and_save(html, url, company_code):
         LOGGER.warning('no article id in url %s', url)
         return False
 
-    label_id = None
+    label_code = None
     if data['label'] and data['label']['title']:
-        label_id = await db.get_or_create_label(
+        label_code = await db.get_or_create_label(
             data['label']['code'] or '', data['label']['title'])
 
-    inserted = await db.insert_article(
+        inserted = await db.insert_article(
         article_id=data['id'],
         title=data['title'][:255],
         stats_counter=(data['stats_counter'] or '')[:255] or None,
-        label_id=label_id,
+        label_id=label_code,
         company_code=company_code,
         score_counter=data['score_counter'],
         bookmarks_counter=data['bookmarks_counter'],
@@ -159,8 +159,8 @@ async def parse_and_save(html, url, company_code):
 
     if inserted:
         for hub in data['hubs']:
-            hub_id = await db.get_or_create_hub(hub['code'], hub['title'])
-            await db.link_article_hub(data['id'], hub_id)
+            hub_code = await db.get_or_create_hub(hub['code'], hub['title'])
+            await db.link_article_hub(data['id'], hub_code)
         LOGGER.info('saved article %s (%s) for company %s',
                     data['id'], data['title'][:50], company_code)
 
