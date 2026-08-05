@@ -94,6 +94,53 @@ python scripts/crawl.py --configfile .habrcrawler-config.yml
 Остановка — `Ctrl+C` (краулер завершится корректно). Повторный запуск
 безопасен: статьи с уже существующим `id` пропускаются.
 
+### Режим сбора отраслей компаний
+
+Для сбора отраслей (категорий) компаний вместо статей установите
+в `.habrcrawler-config.yml`:
+
+```yaml
+Habr:
+  Enabled: True
+  ProfileMode: True
+```
+
+В этом режиме краулер проходит по всем компаниям из таблицы `companies`,
+открывает страницу профиля `https://habr.com/ru/companies/{code}/profile/`
+и извлекает отрасли из блока `div.tm-company-profile__categories`.
+
+Каждая отрасль сохраняется в таблицу `category` (code из URL вида
+`/ru/companies/category/telecom/`, title — текст ссылки), а связь
+компании с отраслью — в таблицу `company_categories`.
+
+**Что было сделано для этого режима:**
+
+1. **`habrcrawler/company_categories.py`** — новый модуль:
+   - `HabrCompanyProfileSeedGenerator` — генерирует URL профилей
+     `https://habr.com/ru/companies/{code}/profile/` для всех компаний из БД
+   - `parse_categories_html()` — извлекает отрасли из
+     `div.tm-company-profile__categories` (code из URL
+     `/ru/companies/category/telecom/`, title — текст ссылки)
+   - `parse_and_save_categories()` — сохраняет отрасли в таблицу `category`
+     и связи в `company_categories`
+
+2. **`habrcrawler/db.py`** — добавлены функции:
+   - `get_or_create_category(code, title)` — поиск/создание отрасли
+     с in-memory кэшем
+   - `link_company_category(company_code, category_code)` — привязка
+     отрасли к компании
+
+3. **`habrcrawler/post_fetch.py`** — обработка профилей: при
+   `profile_page=True` в ridealong вызывается парсер категорий вместо
+   парсера статей
+
+4. **`habrcrawler/__init__.py`** — поддержка режима `ProfileMode`: при
+   `Habr.Enabled=True` и `Habr.ProfileMode=True` используется генератор
+   профилей
+
+5. **Конфигурация** — добавлены `ProfileMode` и `ProfileUrlTemplate`
+   в `config.py` и `.habrcrawler-config.yml`
+
 ## Сохранение прогресса
 
 Краулер ведёт прогресс по каждой компании отдельно: в таблице
@@ -190,10 +237,13 @@ python -m pytest tests/test_habr_parse.py -v
   по компаниям из БД с round-robin чередованием (весь диапазон 1..10M
   в очередь не помещается, поэтому URL подкладываются порциями по мере
   опустошения очереди, по одному article_id от каждой компании в батче).
+- `habrcrawler/company_categories.py` — генерация URL профилей компаний
+  и извлечение отраслей (категорий) из HTML профиля.
 - `habrcrawler/habr_parse.py` — извлечение полей статьи из HTML
   (BeautifulSoup + lxml) и запись в БД.
 - `habrcrawler/db.py` — асинхронный слой MySQL (aiomysql): компании,
-  справочники hubs/labels с in-memory кэшем, вставка статей и связей.
+  справочники hubs/labels/category с in-memory кэшем, вставка статей
+  и связей.
 - `habrcrawler/post_fetch.py` — точка входа обработки скачанной страницы.
 - `scripts/crawl.py` — главная программа.
 

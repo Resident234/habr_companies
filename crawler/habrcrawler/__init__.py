@@ -43,6 +43,7 @@ from . import geoip
 from . import memory
 from . import db
 from . import habr_seeds
+from . import company_categories
 
 
 LOGGER = logging.getLogger(__name__)
@@ -141,6 +142,7 @@ class Crawler:
         stats.init()
 
         self.habr_mode = bool(config.read('Habr', 'Enabled'))
+        self.habr_profile_mode = bool(config.read('Habr', 'ProfileMode'))
         self.habr_generator = None
 
         if load is not None:
@@ -150,7 +152,14 @@ class Crawler:
             LOGGER.info('at time of loading, stats are')
             stats.report()
         else:
-            if self.habr_mode:
+            if self.habr_mode and self.habr_profile_mode:
+                # Habr profile mode: one url per company profile page,
+                # categories are extracted and saved to category/
+                # company_categories tables
+                self._seeds = []
+                self.habr_generator = self.loop.run_until_complete(
+                    company_categories.seed_from_database(self))
+            elif self.habr_mode:
                 # Habr mode: seeds come from the companies table in MySQL,
                 # generated lazily in batches
                 self._seeds = []

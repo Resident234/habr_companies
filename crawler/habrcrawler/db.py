@@ -19,6 +19,7 @@ _pool = None
 # in-memory caches: code -> id
 _hub_cache = {}
 _label_cache = {}
+_category_cache = {}
 
 
 async def init_pool():
@@ -206,3 +207,45 @@ async def link_article_hub(article_id, hub_code):
                 'INSERT IGNORE INTO article_hubs (article_id, hub_code) '
                 'VALUES (%s, %s)',
                 (article_id, hub_code))
+
+
+async def get_or_create_category(code, title):
+    '''
+    Ensure a category row exists and return its code (string).
+    Category table uses `code` as primary key.
+    '''
+    code = (code or '').strip()
+    if not code:
+        return None
+
+    if code in _category_cache:
+        return _category_cache[code]
+
+    pool = await init_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute('SELECT code FROM category WHERE code = %s', (code,))
+            row = await cur.fetchone()
+            if row:
+                _category_cache[code] = row[0]
+                return row[0]
+            await cur.execute(
+                'INSERT INTO category (code, title) VALUES (%s, %s)',
+                (code, title))
+            _category_cache[code] = code
+            stats.stats_sum('categories created', 1)
+            LOGGER.info('created category: code=%s title=%s', code, title)
+            return code
+
+
+async def link_company_category(company_code, category_code):
+    '''
+    Link a company to a category in the company_categories table.
+    '''
+    pool = await init_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                'INSERT IGNORE INTO company_categories (company_code, category_code) '
+                'VALUES (%s, %s)',
+                (company_code, category_code))

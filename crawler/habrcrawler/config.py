@@ -133,9 +133,11 @@ Database:
 
 Habr:
   Enabled: False
+  ProfileMode: False  # if True, crawl company profiles instead of articles
   ArticleIdStart: 1
   ArticleIdEnd: 10000000
   UrlTemplate: 'https://habr.com/ru/companies/{company}/articles/{article_id}/'
+  ProfileUrlTemplate: 'https://habr.com/ru/companies/{company}/profile/'
   SeedBatchSize: 20000  # how many urls to keep queued per company batch
 
 '''

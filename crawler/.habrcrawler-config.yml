@@ -12,9 +12,11 @@ Database:
 
 Habr:
   Enabled: True
+  ProfileMode: False  # True = crawl company profiles for categories
   ArticleIdStart: 1
   ArticleIdEnd: 10000000
   UrlTemplate: 'https://habr.com/ru/companies/{company}/articles/{article_id}/'
+  ProfileUrlTemplate: 'https://habr.com/ru/companies/{company}/profile/'
   SeedBatchSize: 20000
 
 Crawl:

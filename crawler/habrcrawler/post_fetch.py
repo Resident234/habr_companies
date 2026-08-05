@@ -23,6 +23,7 @@ from . import facet
 from . import geoip
 from . import content
 from . import habr_parse
+from . import company_categories
 
 
 LOGGER = logging.getLogger(__name__)
@@ -236,14 +237,25 @@ async def post_2xx(f, url, ridealong, priority, host_geoip, json_log, crawler):
         charset_log(json_log, charset, detect, charset_used)
 
         if config.read('Habr', 'Enabled'):
-            # Habr article parsing mode: save to MySQL, never follow links
+            # Habr parsing mode: save to MySQL, never follow links
             company_code = ridealong.get('company_code')
-            try:
-                saved = await habr_parse.parse_and_save(body, url.url, company_code)
-                json_log['habr_article_saved'] = bool(saved)
-            except Exception as e:
-                stats.stats_sum('habr save errors', 1)
-                LOGGER.warning('failed to save article %s: %s', url.url, e)
+            if ridealong.get('profile_page'):
+                # Company profile page: extract categories
+                try:
+                    saved = await company_categories.parse_and_save_categories(
+                        body, company_code)
+                    json_log['habr_profile_saved'] = bool(saved)
+                except Exception as e:
+                    stats.stats_sum('habr profile save errors', 1)
+                    LOGGER.warning('failed to save profile %s: %s', url.url, e)
+            else:
+                # Article page: extract article data
+                try:
+                    saved = await habr_parse.parse_and_save(body, url.url, company_code)
+                    json_log['habr_article_saved'] = bool(saved)
+                except Exception as e:
+                    stats.stats_sum('habr save errors', 1)
+                    LOGGER.warning('failed to save article %s: %s', url.url, e)
             return
 
         try:
