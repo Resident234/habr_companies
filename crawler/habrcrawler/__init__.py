@@ -11,11 +11,13 @@ from setuptools_scm import get_version
 import json
 import traceback
 import concurrent
-import resource
+try:
+    import resource
+except ImportError:
+    resource = None  # Unix-only module, not available on Windows
 import ssl
 
 import asyncio
-import uvloop
 import logging
 import aiohttp
 import aiohttp.resolver
@@ -566,9 +568,10 @@ class Crawler:
 
         self.next_minute = time.time() + 60
         stats.stats_set('DNS cache size', self.resolver.size())
-        ru = resource.getrusage(resource.RUSAGE_SELF)
-        vmem = (ru[2])/1000000.  # gigabytes
-        stats.stats_set('main thread vmem', vmem)
+        if resource is not None:
+            ru = resource.getrusage(resource.RUSAGE_SELF)
+            vmem = (ru[2])/1000000.  # gigabytes
+            stats.stats_set('main thread vmem', vmem)
         stats.report()
         stats.coroutine_report()
         memory.print_summary(self.memory_crawler)

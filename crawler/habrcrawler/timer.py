@@ -19,7 +19,10 @@ better than doing both together.
 import pickle
 import struct
 import time
-import resource
+try:
+    import resource
+except ImportError:
+    resource = None  # Unix-only module, not available on Windows
 import logging
 
 import asyncio
@@ -179,11 +182,12 @@ class CarbonTimer:
                 self.elapsed_timebin.point(t, elapsed)
                 carbon_tuples += self.elapsed_timebin.gettuples(self.prefix+'.elapsed')
 
-                ru = resource.getrusage(resource.RUSAGE_SELF)
-                vmem = (ru[2])/1000000.  # gigabytes
-                # TODO: swapouts in 8, blocks out in 10
-                self.vmem_timebin.point(t, vmem)
-                carbon_tuples += self.vmem_timebin.gettuples(self.prefix+'.vmem')
+                if resource is not None:
+                    ru = resource.getrusage(resource.RUSAGE_SELF)
+                    vmem = (ru[2])/1000000.  # gigabytes
+                    # TODO: swapouts in 8, blocks out in 10
+                    self.vmem_timebin.point(t, vmem)
+                    carbon_tuples += self.vmem_timebin.gettuples(self.prefix+'.vmem')
 
                 if carbon_tuples:
                     await carbon_push(self.server, self.port, carbon_tuples)

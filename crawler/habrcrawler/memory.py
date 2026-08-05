@@ -4,7 +4,10 @@ Code related to memory and memory debugging
 
 import logging
 import io
-import resource
+try:
+    import resource
+except ImportError:
+    resource = None  # Unix-only module, not available on Windows
 import gc
 import os
 import random
@@ -92,6 +95,9 @@ def print_summary(f):
 
 
 def limit_resources():
+    if resource is None:
+        LOGGER.warning('resource module not available (Windows), skipping rlimit setup')
+        return
     soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
     try:
         resource.setrlimit(resource.RLIMIT_NOFILE, (hard, hard))
