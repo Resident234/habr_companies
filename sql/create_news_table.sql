@@ -7,4 +7,4 @@ CREATE TABLE news (
     bookmarks_counter INT,
     comments_counter INT,
     FOREIGN KEY (company) REFERENCES companies(code)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

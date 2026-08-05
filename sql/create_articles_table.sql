@@ -1,12 +1,12 @@
 CREATE TABLE hubs (
     code VARCHAR(255) PRIMARY KEY,
     title VARCHAR(255) NOT NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE labels (
     code VARCHAR(255) PRIMARY KEY,
     title VARCHAR(255) NOT NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE articles (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -19,4 +19,4 @@ CREATE TABLE articles (
     comments_counter INT,
     FOREIGN KEY (label) REFERENCES labels(code),
     FOREIGN KEY (company) REFERENCES companies(code)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
