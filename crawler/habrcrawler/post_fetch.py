@@ -24,6 +24,7 @@ from . import geoip
 from . import content
 from . import habr_parse
 from . import company_categories
+from . import company_posts
 
 
 LOGGER = logging.getLogger(__name__)
@@ -248,6 +249,16 @@ async def post_2xx(f, url, ridealong, priority, host_geoip, json_log, crawler):
                 except Exception as e:
                     stats.stats_sum('habr profile save errors', 1)
                     LOGGER.warning('failed to save profile %s: %s', url.url, e)
+            elif ridealong.get('posts_page'):
+                # Company posts list page: extract posts, chain next page
+                try:
+                    page = ridealong.get('posts_page_number') or 1
+                    count = await company_posts.parse_and_save_posts(
+                        body, company_code, page, crawler=crawler)
+                    json_log['habr_posts_found'] = count
+                except Exception as e:
+                    stats.stats_sum('habr posts save errors', 1)
+                    LOGGER.warning('failed to save posts %s: %s', url.url, e)
             else:
                 # Article page: extract article data
                 try:

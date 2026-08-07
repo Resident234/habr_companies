@@ -209,6 +209,42 @@ async def link_article_hub(article_id, hub_code):
                 (article_id, hub_code))
 
 
+async def insert_post(post_id, title, stats_counter, company_code,
+                      score_counter, bookmarks_counter, comments_counter):
+    '''
+    Insert one post row. Returns True if inserted, False if it already
+    existed (duplicate id).
+    '''
+    pool = await init_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            try:
+                await cur.execute(
+                    'INSERT INTO posts '
+                    '(id, title, stats_counter, company, '
+                    ' score_counter, bookmarks_counter, comments_counter) '
+                    'VALUES (%s, %s, %s, %s, %s, %s, %s)',
+                    (post_id, title, stats_counter, company_code,
+                     score_counter, bookmarks_counter, comments_counter))
+                stats.stats_sum('posts inserted', 1)
+                return True
+            except Exception as e:
+                if 'Duplicate entry' in str(e):
+                    stats.stats_sum('posts duplicate skipped', 1)
+                    return False
+                raise
+
+
+async def link_post_hub(post_id, hub_code):
+    pool = await init_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                'INSERT IGNORE INTO post_hubs (post_id, hub_code) '
+                'VALUES (%s, %s)',
+                (post_id, hub_code))
+
+
 async def get_or_create_category(code, title):
     '''
     Ensure a category row exists and return its code (string).

@@ -44,6 +44,7 @@ from . import memory
 from . import db
 from . import habr_seeds
 from . import company_categories
+from . import company_posts
 
 
 LOGGER = logging.getLogger(__name__)
@@ -143,6 +144,7 @@ class Crawler:
 
         self.habr_mode = bool(config.read('Habr', 'Enabled'))
         self.habr_profile_mode = bool(config.read('Habr', 'ProfileMode'))
+        self.habr_posts_mode = bool(config.read('Habr', 'PostsMode'))
         self.habr_generator = None
 
         if load is not None:
@@ -159,6 +161,13 @@ class Crawler:
                 self._seeds = []
                 self.habr_generator = self.loop.run_until_complete(
                     company_categories.seed_from_database(self))
+            elif self.habr_mode and self.habr_posts_mode:
+                # Habr posts mode: one posts list page per company is
+                # queued up front; further pages are chained from the
+                # parser. Posts are saved to the posts table.
+                self._seeds = []
+                self.habr_generator = self.loop.run_until_complete(
+                    company_posts.seed_from_database(self))
             elif self.habr_mode:
                 # Habr mode: seeds come from the companies table in MySQL,
                 # generated lazily in batches

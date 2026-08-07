@@ -72,8 +72,14 @@ def parse_article_html(html, url):
         for a in hubs_container.find_all('a', class_='tm-publication-hub__link'):
             href = a.get('href', '')
             hm = re.search(r'/hubs/([^/]+)/', href)
-            code = hm.group(1) if hm else href.strip('/').split('/')[-1]
-            hub_title = a.get_text(strip=True)
+            cm = re.search(r'/companies/([^/]+)/', href)
+            if hm:
+                code = hm.group(1)
+            elif cm:
+                code = cm.group(1)
+            else:
+                code = href.strip('/').split('/')[-1]
+            hub_title = a.get_text(' ', strip=True)
             if code:
                 hubs.append({'code': code, 'title': hub_title})
 
