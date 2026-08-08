@@ -86,14 +86,14 @@ function Find-NgrokExe {
 function Download-Ngrok {
     $zip  = "$env:TEMP\ngrok_setup.zip"
     $dest = "$env:TEMP\ngrok"
-    Write-Output "Downloading ngrok..."
+    Write-Host "Downloading ngrok..."
     Invoke-WebRequest -Uri "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip" -OutFile $zip -UseBasicParsing
     Expand-Archive -Path $zip -DestinationPath $dest -Force
     Remove-Item $zip -Force
     $exe = Join-Path $dest "ngrok.exe"
     if (-not (Test-Path $exe)) { Write-Error "ngrok.exe not found after extraction"; exit 1 }
-    Write-Output "ngrok extracted to: $exe"
-    return $exe
+    Write-Host "ngrok extracted to: $exe"
+    Write-Output $exe
 }
 
 $NgrokExe = Find-NgrokExe
