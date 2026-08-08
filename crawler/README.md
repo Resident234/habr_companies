@@ -66,9 +66,13 @@ Habr:
   UrlTemplate: 'https://habr.com/ru/companies/{company}/articles/{article_id}/'
   ProfileUrlTemplate: 'https://habr.com/ru/companies/{company}/profile/'
   PostsUrlTemplate: 'https://habr.com/ru/companies/{company}/posts/'
+  NewsUrlTemplate: 'https://habr.com/ru/companies/{company}/news/{news_id}/'
+  NewsIdStart: 1
+  NewsIdEnd: 10000000
   # Режимы (взаимоисключающие, проверяются сверху вниз):
   ProfileMode: False    # True = собирать отрасли из профилей компаний
   PostsMode: False      # True = собирать посты из ленты /companies/{code}/posts/
+  NewsMode: False       # True = собирать новости перебором /companies/{code}/news/{id}/
   SeedBatchSize: 20000   # сколько URL держать в очереди на компанию
 
 Crawl:
@@ -88,7 +92,7 @@ Crawl:
 
 Схему БД см. в `../sql/` (`create_articles_table.sql`,
 `create_companies_table.sql`, `create_article_hubs_table.sql`,
-`create_post_hubs_table.sql`).
+`create_post_hubs_table.sql`, `create_news_hubs_table.sql`).
 
 ## Запуск
 
@@ -222,6 +226,82 @@ https://habr.com/ru/companies/{company_code}/posts/page2/
 6. **SQL** — `../sql/create_post_hubs_table.sql`: связка постов с хабами
    (по образцу `article_hubs`)
 
+### Режим сбора новостей компаний
+
+Для сбора новостей компаний вместо статей установите в
+`.habrcrawler-config.yml`:
+
+```yaml
+Habr:
+  Enabled: True
+  NewsMode: True
+```
+
+Режим работает так же, как воркер статей: для каждой компании из
+таблицы `companies` перебирается диапазон id от `NewsIdStart` до
+`NewsIdEnd` (1..10 000 000 по умолчанию) по шаблону
+
+```
+https://habr.com/ru/companies/{company}/news/{news_id}/
+```
+
+Например: `https://habr.com/ru/companies/lanit/news/984896/`
+
+Страница новости размечена так же, как страница статьи
+(`h1.tm-title`, `span.tm-icon-counter__value`, `.tm-publication-hubs`,
+`tm-votes-meter__value_rating` и т.д.), поэтому извлечение полей
+переиспользует парсер статей; отличается только шаблон URL для
+получения id. Найденные новости сохраняются в таблицу `news` (поля
+аналогичны `articles`, за исключением отсутствия label). Хабы новости
+сохраняются в справочник `hubs` и привязываются через связную таблицу
+`news_hubs` (many-to-many, см. `../sql/create_news_hubs_table.sql`).
+
+Прогресс сохраняется в отдельную колонку
+`companies.last_processed_news_id` (тем же способом, что
+`last_processed_article_id` для статей), поэтому перезапуск продолжает
+перебор с `last_processed_news_id + 1`. Повторный запуск безопасен:
+новости с уже существующим `id` пропускаются.
+
+**Что было сделано для этого режима:**
+
+1. **`habrcrawler/habr_news.py`** — новый модуль:
+   - `HabrNewsSeedGenerator` — ленивая батчевая генерация URL новостей
+     по компаниям из БД с round-robin чередованием (копия механики
+     `HabrSeedGenerator`, но по диапазону `news_id`,
+     `NewsUrlTemplate`, `NewsIdStart`, `NewsIdEnd`)
+
+2. **`habrcrawler/habr_news_parse.py`** — новый модуль:
+   - `NEWS_URL_RE` — шаблон `/ru/companies/{company}/news/{news_id}/`
+   - `parse_and_save_news()` — извлекает поля через
+     `parse_article_html()` (id берётся из `NEWS_URL_RE`), сохраняет
+     новость в `news` и привязывает хабы
+
+3. **`habrcrawler/db.py`** — добавлены функции:
+   - `get_companies_news_progress()` — список компаний с прогрессом
+     `last_processed_news_id`
+   - `insert_news(...)` — вставка новости (дубликаты по `id`
+     пропускаются)
+   - `link_news_hub(news_id, hub_code)` — привязка хаба к новости
+   - `update_company_news_progress(code, news_id)` — обновление
+     прогресса через `GREATEST(...)`
+
+4. **`habrcrawler/__init__.py`** — поддержка режима `NewsMode`: при
+   `Habr.Enabled=True` и `Habr.NewsMode=True` используется генератор
+   новостей; прогресс `last_processed_news_id` обновляется после
+   финального исхода обработки каждого URL с `news_id`
+
+5. **`habrcrawler/post_fetch.py`** — обработка страниц новостей: при
+   `news_id` в ridealong вызывается парсер новостей вместо парсера
+   статей
+
+6. **Конфигурация** — добавлены `NewsMode`, `NewsUrlTemplate`,
+   `NewsIdStart`, `NewsIdEnd` в `config.py` и `.habrcrawler-config.yml`
+
+7. **SQL** — `../sql/create_news_hubs_table.sql` (связка news_hubs)
+   и `../sql/add_last_processed_news_id_to_companies.sql` (идемпотентная
+   миграция для существующих баз; для новых баз колонка уже включена в
+   `../sql/create_companies_table.sql`)
+
 ## Сохранение прогресса
 
 Краулер ведёт прогресс по каждой компании отдельно: в таблице
@@ -266,7 +346,7 @@ ALTER TABLE companies
 Юнит-тесты парсеров (на HTML-сниппетах из ТЗ, без сети и БД):
 
 ```
-python -m pytest tests/test_habr_parse.py tests/test_habr_posts_parse.py -v
+python -m pytest tests/test_habr_parse.py tests/test_habr_posts_parse.py tests/test_habr_news_parse.py -v
 ```
 
 ## Параллелизм и порядок обхода компаний
@@ -318,6 +398,9 @@ python -m pytest tests/test_habr_parse.py tests/test_habr_posts_parse.py -v
   по компаниям из БД с round-robin чередованием (весь диапазон 1..10M
   в очередь не помещается, поэтому URL подкладываются порциями по мере
   опустошения очереди, по одному article_id от каждой компании в батче).
+- `habrcrawler/habr_news.py` — то же самое для новостей (перебор
+  `NewsIdStart..NewsIdEnd` по
+  `https://habr.com/ru/companies/{company}/news/{news_id}/`).
 - `habrcrawler/company_categories.py` — генерация URL профилей компаний
   и извлечение отраслей (категорий) из HTML профиля.
 - `habrcrawler/company_posts.py` — генерация URL страниц постов
@@ -325,9 +408,11 @@ python -m pytest tests/test_habr_parse.py tests/test_habr_posts_parse.py -v
   списка с цепочной пагинацией.
 - `habrcrawler/habr_parse.py` — извлечение полей статьи из HTML
   (BeautifulSoup + lxml) и запись в БД.
+- `habrcrawler/habr_news_parse.py` — то же для страниц новостей
+  (переиспользует `habr_parse`, отличие — только шаблон URL с id).
 - `habrcrawler/db.py` — асинхронный слой MySQL (aiomysql): компании,
   справочники hubs/labels/category с in-memory кэшем, вставка статей,
-  постов и связей.
+  новостей, постов и связей, обновление прогресса.
 - `habrcrawler/post_fetch.py` — точка входа обработки скачанной страницы.
 - `scripts/crawl.py` — главная программа.
 

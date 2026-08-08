@@ -73,6 +73,23 @@ async def get_companies():
     return companies
 
 
+async def get_companies_news_progress():
+    '''
+    Returns a list of (company_code, last_processed_news_id) tuples
+    from the companies table. last_processed_news_id is None for
+    companies whose news have not been crawled yet.
+    '''
+    pool = await init_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                'SELECT code, last_processed_news_id FROM companies')
+            rows = await cur.fetchall()
+    companies = [(r[0], r[1]) for r in rows]
+    LOGGER.info('loaded %d companies from database', len(companies))
+    return companies
+
+
 async def update_company_progress(code, article_id):
     '''
     Record the article_id last processed for a company. Uses GREATEST so a
@@ -243,6 +260,58 @@ async def link_post_hub(post_id, hub_code):
                 'INSERT IGNORE INTO post_hubs (post_id, hub_code) '
                 'VALUES (%s, %s)',
                 (post_id, hub_code))
+
+
+async def insert_news(news_id, title, stats_counter, company_code,
+                      score_counter, bookmarks_counter, comments_counter):
+    '''
+    Insert one news row. Returns True if inserted, False if it already
+    existed (duplicate id).
+    '''
+    pool = await init_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            try:
+                await cur.execute(
+                    'INSERT INTO news '
+                    '(id, title, stats_counter, company, '
+                    ' score_counter, bookmarks_counter, comments_counter) '
+                    'VALUES (%s, %s, %s, %s, %s, %s, %s)',
+                    (news_id, title, stats_counter, company_code,
+                     score_counter, bookmarks_counter, comments_counter))
+                stats.stats_sum('news inserted', 1)
+                return True
+            except Exception as e:
+                if 'Duplicate entry' in str(e):
+                    stats.stats_sum('news duplicate skipped', 1)
+                    return False
+                raise
+
+
+async def link_news_hub(news_id, hub_code):
+    pool = await init_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                'INSERT IGNORE INTO news_hubs (news_id, hub_code) '
+                'VALUES (%s, %s)',
+                (news_id, hub_code))
+
+
+async def update_company_news_progress(code, news_id):
+    '''
+    Record the news_id last processed for a company. Uses GREATEST so a
+    concurrently processed lower news_id can never roll the progress back.
+    '''
+    pool = await init_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                'UPDATE companies '
+                'SET last_processed_news_id = '
+                '    GREATEST(COALESCE(last_processed_news_id, 0), %s) '
+                'WHERE code = %s',
+                (news_id, code))
 
 
 async def get_or_create_category(code, title):
