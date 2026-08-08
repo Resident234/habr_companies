@@ -314,6 +314,19 @@ async def update_company_news_progress(code, news_id):
                 (news_id, code))
 
 
+async def update_company_link(code, link):
+    '''
+    Store the company website url extracted from the profile page
+    (<a class="tm-company-basic-info__link" href="...">).
+    '''
+    pool = await init_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                'UPDATE companies SET link = %s WHERE code = %s',
+                (link, code))
+
+
 async def get_or_create_category(code, title):
     '''
     Ensure a category row exists and return its code (string).

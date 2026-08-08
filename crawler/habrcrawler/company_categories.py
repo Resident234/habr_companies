@@ -93,6 +93,21 @@ class HabrCompanyProfileSeedGenerator:
         pass
 
 
+def parse_company_link(html):
+    '''
+    Extract the company website url from the profile page element:
+        <a class="tm-company-basic-info__link" href="http://www.ya.ru/"
+           target="_blank">www.ya.ru</a>
+    Returns the href string or None when the element is absent.
+    '''
+    soup = BeautifulSoup(html, 'lxml')
+    a = soup.find('a', class_='tm-company-basic-info__link')
+    if a is None:
+        return None
+    link = (a.get('href') or '').strip()
+    return link or None
+
+
 def parse_categories_html(html):
     '''
     Parse a company profile page and return a list of
@@ -119,14 +134,30 @@ def parse_categories_html(html):
 async def parse_and_save_categories(html, company_code):
     '''
     Parse the profile page and write categories to the database.
+    Also extracts the company website link
+    (<a class="tm-company-basic-info__link" href="...">) and stores it
+    in companies.link.
     Returns True if categories were saved.
     '''
     try:
         categories = parse_categories_html(html)
+        link = parse_company_link(html)
     except Exception as e:
         LOGGER.warning('failed to parse profile for %s: %s', company_code, e)
         stats.stats_sum('habr profile parse errors', 1)
         return False
+
+    if link:
+        try:
+            await db.update_company_link(company_code, link)
+            stats.stats_sum('companies with link', 1)
+            LOGGER.info('company %s: saved link %s', company_code, link)
+        except Exception as e:
+            LOGGER.warning('failed to save link for %s: %s', company_code, e)
+            stats.stats_sum('habr link save errors', 1)
+    else:
+        stats.stats_sum('companies without link', 1)
+        LOGGER.info('no website link found for company %s', company_code)
 
     if not categories:
         LOGGER.info('no categories found for company %s', company_code)
