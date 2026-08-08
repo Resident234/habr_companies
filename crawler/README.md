@@ -64,6 +64,11 @@ Habr:
   ArticleIdStart: 1
   ArticleIdEnd: 10000000
   UrlTemplate: 'https://habr.com/ru/companies/{company}/articles/{article_id}/'
+  ProfileUrlTemplate: 'https://habr.com/ru/companies/{company}/profile/'
+  PostsUrlTemplate: 'https://habr.com/ru/companies/{company}/posts/'
+  # Режимы (взаимоисключающие, проверяются сверху вниз):
+  ProfileMode: False    # True = собирать отрасли из профилей компаний
+  PostsMode: False      # True = собирать посты из ленты /companies/{code}/posts/
   SeedBatchSize: 20000   # сколько URL держать в очереди на компанию
 
 Crawl:
@@ -82,7 +87,8 @@ Crawl:
 | `Database.MaxPoolSize` | `habrcrawler/db.py` | 10 | Максимальный размер пула соединений aiomysql; должен быть `>= MinPoolSize` |
 
 Схему БД см. в `../sql/` (`create_articles_table.sql`,
-`create_companies_table.sql`, `create_article_hubs_table.sql`).
+`create_companies_table.sql`, `create_article_hubs_table.sql`,
+`create_post_hubs_table.sql`).
 
 ## Запуск
 
@@ -141,6 +147,81 @@ Habr:
 5. **Конфигурация** — добавлены `ProfileMode` и `ProfileUrlTemplate`
    в `config.py` и `.habrcrawler-config.yml`
 
+### Режим сбора постов компаний
+
+Для сбора постов компаний (лента `/ru/companies/{code}/posts/`) вместо
+статей установите в `.habrcrawler-config.yml`:
+
+```yaml
+Habr:
+  Enabled: True
+  PostsMode: True
+```
+
+В отличие от статей, у постов нет отдельных страниц под конкретным
+article_id: вся лента постов живёт на пагинированных страницах вида
+
+```
+https://habr.com/ru/companies/{company_code}/posts/
+https://habr.com/ru/companies/{company_code}/posts/page2/
+...
+```
+
+Каждая страница содержит до 20 постов в блоках
+`<article class="tm-articles-list__item">`; в разметке списка уже
+есть всё нужное (заголовок, счётчики, хабы), поэтому отдельно посты
+не скачиваются. Пагинация цепочечная: если распарсенная страница
+содержала посты, парсер сам ставит в очередь страницу `page{N+1}`;
+пустая страница завершает обход компании.
+
+Для каждого поста (таблица `posts`) сохраняется:
+
+| Поле               | Откуда |
+|--------------------|--------|
+| `id`               | атрибут `id` блока `<article>` (числовой) |
+| `title`            | текст первого `<strong>` внутри статьи (внутри ссылки заголовка) |
+| `stats_counter`    | атрибут `title` у `span.tm-icon-counter__value` (число просмотров) |
+| `company`          | компания, чья страница постов обходится |
+| `score_counter`    | текст внутри `.tm-votes-meter__value` |
+| `bookmarks_counter`| текст внутри `button.bookmarks-button span.counter` |
+| `comments_counter` | текст внутри `span.tm-article-comments-counter-link__value` (0 для «Нет комментариев») |
+
+Хабы поста (ссылки `a.tm-publication-hub__link`) сохраняются в общий
+справочник `hubs` и привязываются к посту через новую связную таблицу
+`post_hubs` (many-to-many, см. `../sql/create_post_hubs_table.sql`).
+Ссылка «Блог компании …» (`/ru/companies/{code}/posts/`) тоже даёт хаб
+с кодом самой компании.
+
+Повторный запуск безопасен: посты с уже существующим `id` пропускаются
+по дубликату первичного ключа.
+
+**Что было сделано для этого режима:**
+
+1. **`habrcrawler/company_posts.py`** — новый модуль:
+   - `HabrPostsSeedGenerator` — ставит в очередь первую страницу постов
+     для каждой компании из БД (`posts_page_url(template, code, 1)`)
+   - `parse_posts_list_html()` — извлекает посты из HTML списка
+   - `parse_and_save_posts()` — сохраняет посты и хабы, при непустой
+     странице ставит в очередь следующую страницу этой компании
+
+2. **`habrcrawler/db.py`** — добавлены функции:
+   - `insert_post(...)` — вставка поста (дубликаты по `id` пропускаются)
+   - `link_post_hub(post_id, hub_code)` — привязка хаба к посту
+
+3. **`habrcrawler/post_fetch.py`** — обработка страниц постов: при
+   `posts_page=True` в ridealong вызывается парсер постов вместо
+   парсера статей
+
+4. **`habrcrawler/__init__.py`** — поддержка режима `PostsMode`: при
+   `Habr.Enabled=True` и `Habr.PostsMode=True` используется генератор
+   страниц постов
+
+5. **Конфигурация** — добавлены `PostsMode` и `PostsUrlTemplate`
+   в `config.py` и `.habrcrawler-config.yml`
+
+6. **SQL** — `../sql/create_post_hubs_table.sql`: связка постов с хабами
+   (по образцу `article_hubs`)
+
 ## Сохранение прогресса
 
 Краулер ведёт прогресс по каждой компании отдельно: в таблице
@@ -182,10 +263,10 @@ ALTER TABLE companies
 
 ## Тесты
 
-Юнит-тест парсера (на HTML-сниппетах из ТЗ, без сети и БД):
+Юнит-тесты парсеров (на HTML-сниппетах из ТЗ, без сети и БД):
 
 ```
-python -m pytest tests/test_habr_parse.py -v
+python -m pytest tests/test_habr_parse.py tests/test_habr_posts_parse.py -v
 ```
 
 ## Параллелизм и порядок обхода компаний
@@ -239,11 +320,14 @@ python -m pytest tests/test_habr_parse.py -v
   опустошения очереди, по одному article_id от каждой компании в батче).
 - `habrcrawler/company_categories.py` — генерация URL профилей компаний
   и извлечение отраслей (категорий) из HTML профиля.
+- `habrcrawler/company_posts.py` — генерация URL страниц постов
+  компаний (`/ru/companies/{code}/posts/`) и извлечение постов из HTML
+  списка с цепочной пагинацией.
 - `habrcrawler/habr_parse.py` — извлечение полей статьи из HTML
   (BeautifulSoup + lxml) и запись в БД.
 - `habrcrawler/db.py` — асинхронный слой MySQL (aiomysql): компании,
-  справочники hubs/labels/category с in-memory кэшем, вставка статей
-  и связей.
+  справочники hubs/labels/category с in-memory кэшем, вставка статей,
+  постов и связей.
 - `habrcrawler/post_fetch.py` — точка входа обработки скачанной страницы.
 - `scripts/crawl.py` — главная программа.
 
