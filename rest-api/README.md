@@ -96,6 +96,52 @@ curl "http://localhost:8080/company/statuses/otus" \
   -H "X-API-Key: my-secret-key"
 ```
 
+### Получение статусов статьи
+
+```text
+GET /article/statuses/{companyCode}/{articleId}?page=N
+X-API-Key: <секретный-ключ>
+```
+
+Возвращает статусы статьи из таблицы `articles` по коду компании и id статьи.
+Числовой суффикс (`?page=N`) опционален и просто игнорируется — нужен для
+совместимости с URL вида `https://habr.com/ru/companies/{code}/articles/{id}/`
+(Хабр добавляет номер страницы комментариев).
+
+- `companyCode` — латинские буквы, цифры, `_`, `-`, 1–255 символов;
+- `articleId` — положительное целое число.
+
+**Ответы:**
+
+- `200 OK` — статусы статьи;
+- `400 Bad Request` — невалидный `companyCode` или `articleId`;
+- `401 Unauthorized` — неверный или отсутствующий API-ключ;
+- `404 Not Found` — статья не найдена;
+- `500 Internal Server Error` — ошибка сервера.
+
+**Формат ответа `200 OK`:**
+
+```json
+{
+  "id": 1067190,
+  "company": "wirenboard",
+  "action_dev":      { "code": "in_progress", "title": "В работе" },
+  "action_post":     { "code": "done",        "title": "Завершено" },
+  "action_comment":  { "code": "backlog",     "title": "В бэклоге" },
+  "action_industry": { "code": "unprocessed", "title": "Не обработано" },
+  "action_company":  { "code": "rejected",    "title": "Отклонено" }
+}
+```
+
+`title` каждого статуса подтягивается из связанной таблицы `statuses`.
+
+**Пример:**
+
+```bash
+curl "http://localhost:8080/article/statuses/wirenboard/1067190" \
+  -H "X-API-Key: my-secret-key"
+```
+
 ## Запуск на Windows
 
 ### В GoLand / IntelliJ IDEA
@@ -295,3 +341,11 @@ CREATE TABLE statuses (
 
 Эндпоинт `GET /company/statuses/{code}` возвращает эти статусы вместе с
 человекочитаемыми `title` из справочника (см. [API](#получение-статусов-компании)).
+
+### Статусы статей
+
+Таблица `articles` содержит колонки `action_dev`, `action_post`,
+`action_comment`, `action_industry`, `action_company` — FK на тот же справочник
+`statuses` (миграция `sql/create_statuses_and_action_columns.sql`). Эндпоинт
+`GET /article/statuses/{companyCode}/{articleId}` возвращает их вместе с
+человекочитаемыми `title` (см. [API](#получение-статусов-статьи)).

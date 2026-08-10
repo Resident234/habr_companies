@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"unicode/utf8"
+
+	dbop "github.com/Resident234/habr_companies/rest-api/dbOp"
 )
 
 func TestValidateCode(t *testing.T) {
@@ -193,6 +195,163 @@ func TestHTTP_TitleWithPercent(t *testing.T) {
 
 	rec := doAdd(t, "acme", "100% cotton", "test-key")
 	if rec.Code != http.StatusCreated {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func withArticleStatuses(t *testing.T, fn func(code string, id int64) (interface{}, bool, error)) {
+	t.Helper()
+	old := getArticleStatuses
+	getArticleStatuses = func(code string, id int64) (*dbopTypesArticleStatuses, bool, error) {
+		res, found, err := fn(code, id)
+		if res == nil {
+			return nil, found, err
+		}
+		return res.(*dbopTypesArticleStatuses), found, err
+	}
+	t.Cleanup(func() { getArticleStatuses = old })
+}
+
+// dbopTypesArticleStatuses — алиас для типа из dbOp (используется в подмене).
+type dbopTypesArticleStatuses = dbop.ArticleStatuses
+
+func doGetArticleStatuses(t *testing.T, code, id, apiKey string, query string) *httptest.ResponseRecorder {
+	t.Helper()
+	path := fmt.Sprintf("/article/statuses/%s/%s%s", url.PathEscape(code), id, query)
+	req := httptest.NewRequest(http.MethodGet, path, nil)
+	if apiKey != "" {
+		req.Header.Set("X-API-Key", apiKey)
+	}
+	rec := httptest.NewRecorder()
+	NewRouter().ServeHTTP(rec, req)
+	return rec
+}
+
+func newTestArticleStatuses() *dbop.ArticleStatuses {
+	return &dbop.ArticleStatuses{
+		ID:      1067190,
+		Company: "wirenboard",
+		ActionDev:      &dbop.CompanyStatus{Code: "in_progress", Title: "В работе"},
+		ActionPost:     &dbop.CompanyStatus{Code: "done", Title: "Завершено"},
+		ActionComment:  &dbop.CompanyStatus{Code: "backlog", Title: "В бэклоге"},
+		ActionIndustry: &dbop.CompanyStatus{Code: "unprocessed", Title: "Не обработано"},
+		ActionCompany:  &dbop.CompanyStatus{Code: "rejected", Title: "Отклонено"},
+	}
+}
+
+func TestHTTP_ArticleStatuses_OK(t *testing.T) {
+	withAPIKey(t)
+	withArticleStatuses(t, func(code string, id int64) (interface{}, bool, error) {
+		if code != "wirenboard" || id != 1067190 {
+			t.Errorf("unexpected args code=%q id=%d", code, id)
+		}
+		return newTestArticleStatuses(), true, nil
+	})
+
+	rec := doGetArticleStatuses(t, "wirenboard", "1067190", "test-key", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	var body dbop.ArticleStatuses
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.ID != 1067190 || body.Company != "wirenboard" {
+		t.Fatalf("body=%+v", body)
+	}
+	if body.ActionDev == nil || body.ActionDev.Title != "В работе" {
+		t.Fatalf("action_dev=%+v", body.ActionDev)
+	}
+	if body.ActionCompany == nil || body.ActionCompany.Code != "rejected" {
+		t.Fatalf("action_company=%+v", body.ActionCompany)
+	}
+}
+
+// Query-строка (например ?page=2) не должна ломать маршрут.
+func TestHTTP_ArticleStatuses_QueryStringIgnored(t *testing.T) {
+	withAPIKey(t)
+	withArticleStatuses(t, func(code string, id int64) (interface{}, bool, error) {
+		return newTestArticleStatuses(), true, nil
+	})
+
+	rec := doGetArticleStatuses(t, "wirenboard", "1067190", "test-key", "?page=2")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHTTP_ArticleStatuses_NotFound(t *testing.T) {
+	withAPIKey(t)
+	withArticleStatuses(t, func(code string, id int64) (interface{}, bool, error) {
+		return nil, false, nil
+	})
+
+	rec := doGetArticleStatuses(t, "wirenboard", "999999", "test-key", "")
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHTTP_ArticleStatuses_InvalidCode(t *testing.T) {
+	withAPIKey(t)
+	withArticleStatuses(t, func(code string, id int64) (interface{}, bool, error) {
+		t.Fatal("getArticleStatuses must not be called")
+		return nil, false, nil
+	})
+
+	rec := doGetArticleStatuses(t, "bad code", "1067190", "test-key", "")
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHTTP_ArticleStatuses_InvalidID(t *testing.T) {
+	withAPIKey(t)
+	withArticleStatuses(t, func(code string, id int64) (interface{}, bool, error) {
+		t.Fatal("getArticleStatuses must not be called")
+		return nil, false, nil
+	})
+
+	rec := doGetArticleStatuses(t, "wirenboard", "abc", "test-key", "")
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHTTP_ArticleStatuses_ZeroID(t *testing.T) {
+	withAPIKey(t)
+	withArticleStatuses(t, func(code string, id int64) (interface{}, bool, error) {
+		t.Fatal("getArticleStatuses must not be called")
+		return nil, false, nil
+	})
+
+	rec := doGetArticleStatuses(t, "wirenboard", "0", "test-key", "")
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHTTP_ArticleStatuses_WrongKey(t *testing.T) {
+	withAPIKey(t)
+	withArticleStatuses(t, func(code string, id int64) (interface{}, bool, error) {
+		t.Fatal("getArticleStatuses must not be called")
+		return nil, false, nil
+	})
+
+	rec := doGetArticleStatuses(t, "wirenboard", "1067190", "wrong-key", "")
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHTTP_ArticleStatuses_DBError(t *testing.T) {
+	withAPIKey(t)
+	withArticleStatuses(t, func(code string, id int64) (interface{}, bool, error) {
+		return nil, false, fmt.Errorf("boom")
+	})
+
+	rec := doGetArticleStatuses(t, "wirenboard", "1067190", "test-key", "")
+	if rec.Code != http.StatusInternalServerError {
 		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
 	}
 }

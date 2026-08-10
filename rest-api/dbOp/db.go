@@ -124,3 +124,74 @@ func GetCompanyStatuses(code string) (statuses *CompanyStatuses, found bool, err
 		ActionCompany:  &CompanyStatus{Code: companyCode, Title: companyTitle},
 	}, true, nil
 }
+
+// ArticleStatuses — статусы статьи по полям action_dev, action_post, action_comment,
+// action_industry и action_company.
+type ArticleStatuses struct {
+	ID             int64          `json:"id"`
+	Company        string         `json:"company"`
+	ActionDev      *CompanyStatus `json:"action_dev"`
+	ActionPost     *CompanyStatus `json:"action_post"`
+	ActionComment  *CompanyStatus `json:"action_comment"`
+	ActionIndustry *CompanyStatus `json:"action_industry"`
+	ActionCompany  *CompanyStatus `json:"action_company"`
+}
+
+// GetArticleStatuses возвращает статусы статьи (таблица articles) по коду компании
+// и id статьи, с человекочитаемыми title из связанной таблицы statuses.
+// found == false, если статья с такими company и id не найдена.
+func GetArticleStatuses(companyCode string, articleID int64) (statuses *ArticleStatuses, found bool, err error) {
+	if db == nil {
+		return nil, false, fmt.Errorf("database not initialized")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var (
+		devCode, devTitle           string
+		postCode, postTitle         string
+		commentCode, commentTitle   string
+		industryCode, industryTitle string
+		companyStatusCode           string
+		companyTitle                string
+	)
+	err = db.QueryRowContext(ctx, `
+		SELECT a.id, a.company,
+		       sd.code, sd.title,
+		       sp.code, sp.title,
+		       sm.code, sm.title,
+		       si.code, si.title,
+		       sc.code, sc.title
+		FROM articles a
+		LEFT JOIN statuses sd ON sd.code = a.action_dev
+		LEFT JOIN statuses sp ON sp.code = a.action_post
+		LEFT JOIN statuses sm ON sm.code = a.action_comment
+		LEFT JOIN statuses si ON si.code = a.action_industry
+		LEFT JOIN statuses sc ON sc.code = a.action_company
+		WHERE a.company = ? AND a.id = ?`, companyCode, articleID,
+	).Scan(
+		&articleID, &companyCode,
+		&devCode, &devTitle,
+		&postCode, &postTitle,
+		&commentCode, &commentTitle,
+		&industryCode, &industryTitle,
+		&companyStatusCode, &companyTitle,
+	)
+	if err == sql.ErrNoRows {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+
+	return &ArticleStatuses{
+		ID:             articleID,
+		Company:        companyCode,
+		ActionDev:      &CompanyStatus{Code: devCode, Title: devTitle},
+		ActionPost:     &CompanyStatus{Code: postCode, Title: postTitle},
+		ActionComment:  &CompanyStatus{Code: commentCode, Title: commentTitle},
+		ActionIndustry: &CompanyStatus{Code: industryCode, Title: industryTitle},
+		ActionCompany:  &CompanyStatus{Code: companyStatusCode, Title: companyTitle},
+	}, true, nil
+}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -14,11 +15,16 @@ import (
 
 var codeRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-]+$`)
 
+var idRegex = regexp.MustCompile(`^\d+$`)
+
 // upsertCompany вызывается из обработчика; подменяется в тестах.
 var upsertCompany = dbop.UpsertCompany
 
 // getCompanyStatuses вызывается из обработчика; подменяется в тестах.
 var getCompanyStatuses = dbop.GetCompanyStatuses
+
+// getArticleStatuses вызывается из обработчика; подменяется в тестах.
+var getArticleStatuses = dbop.GetArticleStatuses
 
 func validateCode(code string) bool {
 	return len(code) > 0 && len(code) <= 255 && codeRegex.MatchString(code)
@@ -101,10 +107,47 @@ func getCompanyStatusesHandler(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, statuses)
 }
 
+// getArticleStatusesHandler обрабатывает GET /article/statuses/{companyCode}/{articleId}.
+// Возвращает статусы action_dev, action_post, action_comment, action_industry
+// и action_company статьи с человекочитаемыми title из справочника statuses.
+func getArticleStatusesHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	code := vars["companyCode"]
+	idStr := vars["articleId"]
+
+	if !validateCode(code) {
+		respondError(w, http.StatusBadRequest, "invalid company code: must be 1-255 chars, only latin letters, digits, _, -")
+		return
+	}
+
+	if !idRegex.MatchString(idStr) {
+		respondError(w, http.StatusBadRequest, "invalid article id: must be a positive integer")
+		return
+	}
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil || id <= 0 {
+		respondError(w, http.StatusBadRequest, "invalid article id: must be a positive integer")
+		return
+	}
+
+	statuses, found, err := getArticleStatuses(code, id)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "database error")
+		return
+	}
+	if !found {
+		respondError(w, http.StatusNotFound, "article not found")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, statuses)
+}
+
 // NewRouter настраивает маршруты (удобно для HTTP-тестов и запуска из operate).
 func NewRouter() http.Handler {
 	r := mux.NewRouter()
 	r.Handle("/company/add/{code}/{title}", middleware.APIKeyAuth(http.HandlerFunc(addCompany))).Methods("POST")
 	r.Handle("/company/statuses/{code}", middleware.APIKeyAuth(http.HandlerFunc(getCompanyStatusesHandler))).Methods("GET")
+	r.Handle("/article/statuses/{companyCode}/{articleId}", middleware.APIKeyAuth(http.HandlerFunc(getArticleStatusesHandler))).Methods("GET")
 	return r
 }
