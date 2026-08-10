@@ -73,3 +73,54 @@ func UpsertCompany(code, title string) (created bool, err error) {
 	// 1 — новая строка, 2 — обновлена существующая, 0 — значения не изменились.
 	return rows == 1, nil
 }
+
+// CompanyStatus — значение action-колонки компании вместе с title из справочника statuses.
+type CompanyStatus struct {
+	Code  string `json:"code"`
+	Title string `json:"title"`
+}
+
+// CompanyStatuses — статусы компании по полям action_industry и action_company.
+type CompanyStatuses struct {
+	Code           string         `json:"code"`
+	ActionIndustry *CompanyStatus `json:"action_industry"`
+	ActionCompany  *CompanyStatus `json:"action_company"`
+}
+
+// GetCompanyStatuses возвращает статусы action_industry и action_company компании
+// с человекочитаемыми title из связанной таблицы statuses.
+// found == false, если компания с таким code не найдена.
+func GetCompanyStatuses(code string) (statuses *CompanyStatuses, found bool, err error) {
+	if db == nil {
+		return nil, false, fmt.Errorf("database not initialized")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var (
+		industryCode, industryTitle string
+		companyCode, companyTitle   string
+	)
+	err = db.QueryRowContext(ctx, `
+		SELECT c.code,
+		       si.code, si.title,
+		       sc.code, sc.title
+		FROM companies c
+		JOIN statuses si ON si.code = c.action_industry
+		JOIN statuses sc ON sc.code = c.action_company
+		WHERE c.code = ?`, code,
+	).Scan(&code, &industryCode, &industryTitle, &companyCode, &companyTitle)
+	if err == sql.ErrNoRows {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+
+	return &CompanyStatuses{
+		Code:           code,
+		ActionIndustry: &CompanyStatus{Code: industryCode, Title: industryTitle},
+		ActionCompany:  &CompanyStatus{Code: companyCode, Title: companyTitle},
+	}, true, nil
+}

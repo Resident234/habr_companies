@@ -7,15 +7,18 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/gorilla/mux"
 	dbop "github.com/Resident234/habr_companies/rest-api/dbOp"
 	"github.com/Resident234/habr_companies/rest-api/middleware"
+	"github.com/gorilla/mux"
 )
 
 var codeRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-]+$`)
 
 // upsertCompany вызывается из обработчика; подменяется в тестах.
 var upsertCompany = dbop.UpsertCompany
+
+// getCompanyStatuses вызывается из обработчика; подменяется в тестах.
+var getCompanyStatuses = dbop.GetCompanyStatuses
 
 func validateCode(code string) bool {
 	return len(code) > 0 && len(code) <= 255 && codeRegex.MatchString(code)
@@ -73,9 +76,35 @@ func addCompany(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// getCompanyStatusesHandler обрабатывает GET /company/statuses/{code}.
+// Возвращает статусы action_industry и action_company компании
+// с человекочитаемыми title из справочника statuses.
+func getCompanyStatusesHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	code := vars["code"]
+
+	if !validateCode(code) {
+		respondError(w, http.StatusBadRequest, "invalid code: must be 1-255 chars, only latin letters, digits, _, -")
+		return
+	}
+
+	statuses, found, err := getCompanyStatuses(code)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "database error")
+		return
+	}
+	if !found {
+		respondError(w, http.StatusNotFound, "company not found")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, statuses)
+}
+
 // NewRouter настраивает маршруты (удобно для HTTP-тестов и запуска из operate).
 func NewRouter() http.Handler {
 	r := mux.NewRouter()
 	r.Handle("/company/add/{code}/{title}", middleware.APIKeyAuth(http.HandlerFunc(addCompany))).Methods("POST")
+	r.Handle("/company/statuses/{code}", middleware.APIKeyAuth(http.HandlerFunc(getCompanyStatusesHandler))).Methods("GET")
 	return r
 }

@@ -61,6 +61,41 @@ curl -X POST \
   -H "X-API-Key: my-secret-key"
 ```
 
+### Получение статусов компании
+
+```text
+GET /company/statuses/{code}
+X-API-Key: <секретный-ключ>
+```
+
+Возвращает статусы компании по полям `action_industry` и `action_company`
+с человекочитаемыми `title` из связанной таблицы `statuses`.
+
+**Ответы:**
+
+- `200 OK` — статусы компании;
+- `400 Bad Request` — невалидный `code`;
+- `401 Unauthorized` — неверный или отсутствующий API-ключ;
+- `404 Not Found` — компания не найдена;
+- `500 Internal Server Error` — ошибка сервера.
+
+**Формат ответа `200 OK`:**
+
+```json
+{
+  "code": "otus",
+  "action_industry": { "code": "in_progress", "title": "В работе" },
+  "action_company":  { "code": "backlog",     "title": "В бэклоге" }
+}
+```
+
+**Пример:**
+
+```bash
+curl "http://localhost:8080/company/statuses/otus" \
+  -H "X-API-Key: my-secret-key"
+```
+
 ## Запуск на Windows
 
 ### В GoLand / IntelliJ IDEA
@@ -241,3 +276,22 @@ CREATE TABLE companies (
 `sql/add_last_processed_article_id_to_companies.sql` (или вручную:
 `ALTER TABLE companies ADD COLUMN last_processed_article_id BIGINT UNSIGNED NULL DEFAULT NULL;`).
 Rest-api эта колонка не трогает — она используется только краулером.
+
+### Статусы компаний
+
+Справочник `statuses` и колонки `action_industry` / `action_company` в таблице
+`companies` создаются идемпотентной миграцией `sql/create_statuses_and_action_columns.sql`:
+
+```sql
+CREATE TABLE statuses (
+    code  VARCHAR(255) PRIMARY KEY,
+    title VARCHAR(255) NOT NULL
+);
+-- companies: action_industry, action_company → FK на statuses(code)
+```
+
+Возможные значения: `unprocessed` (Не обработано), `backlog` (В бэклоге),
+`in_progress` (В работе), `done` (Завершено), `rejected` (Отклонено).
+
+Эндпоинт `GET /company/statuses/{code}` возвращает эти статусы вместе с
+человекочитаемыми `title` из справочника (см. [API](#получение-статусов-компании)).
