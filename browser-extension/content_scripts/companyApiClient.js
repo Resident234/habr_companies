@@ -120,6 +120,58 @@ export class CompanyApiClient {
         }
     }
 
+    async getArticleStatuses(companyCode, articleId) {
+        console.log('[CompanyApiClient.getArticleStatuses] Called with companyCode:', companyCode, 'articleId:', articleId);
+
+        const baseUrl = await this._getBaseUrl();
+        const url = `${baseUrl}/article/statuses/${encodeURIComponent(companyCode)}/${encodeURIComponent(articleId)}`;
+        console.log('[CompanyApiClient.getArticleStatuses] Full request URL:', url);
+
+        try {
+            const response = await new Promise((resolve, reject) => {
+                const port = chrome.runtime.connect({ name: 'fetch' });
+                let settled = false;
+
+                port.onMessage.addListener((msg) => {
+                    settled = true;
+                    port.disconnect();
+                    resolve(msg);
+                });
+
+                port.onDisconnect.addListener(() => {
+                    if (settled) return;
+                    const error = chrome.runtime.lastError;
+                    reject(new Error(error?.message || 'Background port closed unexpectedly'));
+                });
+
+                port.postMessage({
+                    type: 'FETCH_REQUEST',
+                    url: url,
+                    method: 'GET',
+                    headers: {
+                        'X-API-Key': CONFIG.API_KEY,
+                        'Content-Type': 'application/json'
+                    }
+                });
+            });
+
+            console.log('[CompanyApiClient.getArticleStatuses] Response status:', response.status);
+            console.log('[CompanyApiClient.getArticleStatuses] Response body:', response.body);
+
+            if (response.error) throw new Error(response.error);
+
+            if (!response.ok) {
+                console.warn('[CompanyApiClient.getArticleStatuses] Non-ok response:', response.status);
+                return null;
+            }
+
+            return JSON.parse(response.body);
+        } catch (error) {
+            console.error('[CompanyApiClient.getArticleStatuses] Fetch failed:', error);
+            return null;
+        }
+    }
+
     async _getBaseUrl() {
         const prefs = await this._storage.get();
         return (prefs && prefs.base_url) ? prefs.base_url : CONFIG.DEFAULT_BASE_URL;

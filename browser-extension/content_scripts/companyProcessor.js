@@ -31,35 +31,54 @@ export class CompanyProcessor {
             return;
         }
 
-        console.log('[CompanyProcessor.init] Correct page detected, extracting data');
+        const articleMatch = url.pathname.match(/^\/ru\/companies\/([a-zA-Z0-9_-]+)\/articles\/(\d+)\/?$/);
 
         try {
-            const code = CompanyExtractor.extractCode();
-            const title = CompanyExtractor.extractTitle();
-
-            console.log('[CompanyProcessor.init] Extracted code:', code);
-            console.log('[CompanyProcessor.init] Extracted title:', title);
-
-            if (!code || !title) {
-                console.log('[CompanyProcessor.init] Could not extract company code or title, aborting.');
-                return;
+            if (articleMatch) {
+                await this._initArticlePage(articleMatch[1], articleMatch[2]);
+            } else {
+                await this._initCompanyPage();
             }
-
-            console.log('[CompanyProcessor.init] Calling API client sendCompany with code:', code, 'title:', title);
-            const result = await this._apiClient.sendCompany(code, title);
-            console.log('[CompanyProcessor.init] API response:', result);
-
-            MessageControl.show(result.message, result.type);
-
-            console.log('[CompanyProcessor.init] Fetching company statuses for code:', code);
-            const statuses = await this._apiClient.getStatuses(code);
-            console.log('[CompanyProcessor.init] Statuses received:', statuses);
-
-            StatusBadges.render(statuses);
         } catch (error) {
             console.error('[CompanyProcessor.init] Error:', error);
             MessageControl.show(error.message, 'error');
         }
+    }
+
+    async _initCompanyPage() {
+        console.log('[CompanyProcessor._initCompanyPage] Company page detected, extracting data');
+
+        const code = CompanyExtractor.extractCode();
+        const title = CompanyExtractor.extractTitle();
+
+        console.log('[CompanyProcessor._initCompanyPage] Extracted code:', code);
+        console.log('[CompanyProcessor._initCompanyPage] Extracted title:', title);
+
+        if (!code || !title) {
+            console.log('[CompanyProcessor._initCompanyPage] Could not extract company code or title, aborting.');
+            return;
+        }
+
+        console.log('[CompanyProcessor._initCompanyPage] Calling API client sendCompany with code:', code, 'title:', title);
+        const result = await this._apiClient.sendCompany(code, title);
+        console.log('[CompanyProcessor._initCompanyPage] API response:', result);
+
+        MessageControl.show(result.message, result.type);
+
+        console.log('[CompanyProcessor._initCompanyPage] Fetching company statuses for code:', code);
+        const statuses = await this._apiClient.getStatuses(code);
+        console.log('[CompanyProcessor._initCompanyPage] Statuses received:', statuses);
+
+        StatusBadges.render(statuses);
+    }
+
+    async _initArticlePage(companyCode, articleId) {
+        console.log('[CompanyProcessor._initArticlePage] Article page detected, companyCode:', companyCode, 'articleId:', articleId);
+
+        const statuses = await this._apiClient.getArticleStatuses(companyCode, articleId);
+        console.log('[CompanyProcessor._initArticlePage] Statuses received:', statuses);
+
+        StatusBadges.renderArticle(statuses);
     }
 
     _isCorrectPage() {

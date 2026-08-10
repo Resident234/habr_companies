@@ -1,10 +1,16 @@
 /**
- * StatusBadges — отображает индикаторы статусов компании
- * (action_industry и action_company) рядом с названием компании.
+ * StatusBadges — отображает индикаторы статусов:
+ *  - компании (action_industry, action_company) рядом с названием компании;
+ *  - статьи (action_dev, action_post, action_comment, action_industry,
+ *    action_company) рядом с заголовком статьи.
  */
 export class StatusBadges {
     static get CONTAINER_ID() {
         return 'habr-companies-status-badges';
+    }
+
+    static get ARTICLE_CONTAINER_ID() {
+        return 'habr-article-status-badges';
     }
 
     /**
@@ -53,8 +59,62 @@ export class StatusBadges {
         console.log('[StatusBadges.render] Badges inserted');
     }
 
+    /**
+     * Рендерит бейджи статусов статьи возле заголовка страницы (h1.tm-title).
+     * @param {Object} statuses — ответ API статьи:
+     *   { id, company, action_dev, action_post, action_comment, action_industry, action_company }
+     */
+    static renderArticle(statuses) {
+        console.log('[StatusBadges.renderArticle] Called with:', statuses);
+
+        if (!statuses) {
+            console.log('[StatusBadges.renderArticle] No statuses, skipping');
+            return;
+        }
+
+        StatusBadges._removeExistingArticle();
+
+        const title = document.querySelector('h1.tm-title') || document.querySelector('h1');
+        console.log('[StatusBadges.renderArticle] Article title found:', title ? 'yes' : 'no');
+
+        if (!title) {
+            console.warn('[StatusBadges.renderArticle] Article title not found in DOM');
+            return;
+        }
+
+        const container = document.createElement('span');
+        container.id = StatusBadges.ARTICLE_CONTAINER_ID;
+        container.className = 'habr-status-badges habr-status-badges--article';
+
+        const badges = [
+            { label: 'Разработка', status: statuses.action_dev },
+            { label: 'Пост', status: statuses.action_post },
+            { label: 'Комментарий', status: statuses.action_comment },
+            { label: 'Отрасль', status: statuses.action_industry },
+            { label: 'Компания', status: statuses.action_company },
+        ];
+
+        for (const { label, status } of badges) {
+            if (!status) continue;
+            container.appendChild(StatusBadges._buildBadge(label, status));
+        }
+
+        if (container.childElementCount === 0) {
+            console.log('[StatusBadges.renderArticle] No badges to show, skipping');
+            return;
+        }
+
+        title.insertAdjacentElement('afterend', container);
+        console.log('[StatusBadges.renderArticle] Badges inserted');
+    }
+
     static _removeExisting() {
         const existing = document.getElementById(StatusBadges.CONTAINER_ID);
+        if (existing) existing.remove();
+    }
+
+    static _removeExistingArticle() {
+        const existing = document.getElementById(StatusBadges.ARTICLE_CONTAINER_ID);
         if (existing) existing.remove();
     }
 

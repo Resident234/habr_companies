@@ -44,6 +44,14 @@
     vertical-align: middle !important;
 }
 
+/* Бейджи статьи — под заголовком (h1.tm-title), на отдельной строке */
+.habr-status-badges--article {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    margin: 8px 0 12px 0 !important;
+}
+
 .habr-status-badge {
     display: inline-flex !important;
     align-items: center !important;
