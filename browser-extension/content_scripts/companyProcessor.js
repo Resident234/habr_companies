@@ -3,6 +3,7 @@ import { BrowserAPI } from './browserAPI.js';
 import { CompanyApiClient } from './companyApiClient.js';
 import { CompanyExtractor } from './companyExtractor.js';
 import { MessageControl } from './messageControl.js';
+import { StatusBadges } from './statusBadges.js';
 
 export class CompanyProcessor {
     constructor() {
@@ -49,6 +50,12 @@ export class CompanyProcessor {
             console.log('[CompanyProcessor.init] API response:', result);
 
             MessageControl.show(result.message, result.type);
+
+            console.log('[CompanyProcessor.init] Fetching company statuses for code:', code);
+            const statuses = await this._apiClient.getStatuses(code);
+            console.log('[CompanyProcessor.init] Statuses received:', statuses);
+
+            StatusBadges.render(statuses);
         } catch (error) {
             console.error('[CompanyProcessor.init] Error:', error);
             MessageControl.show(error.message, 'error');

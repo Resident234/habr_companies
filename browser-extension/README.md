@@ -9,6 +9,7 @@
   - **Название компании** — извлекается из DOM элемента `.tm-company-profile-card .info a.name span`
 - **Отправка данных в сервис** — POST-запрос на `{base_url}/company/add/{code}/{title}` с заголовком `X-API-Key`
 - **Отображение ответа** — ответ сервиса выводится во всплывающем сообщении на странице через `MessageControl`
+- **Индикаторы статусов компании** — после отправки данных запрашиваются статусы (`GET {base_url}/company/statuses/{code}`) и рядом с названием компании выводятся цветные бейджи со значениями `action_industry` и `action_company` (человекочитаемые `title` из справочника `statuses`)
 - **Настройка адреса сервиса** — URL сервиса можно изменить на странице настроек расширения
 - **Автоматический запуск** — запрос отправляется после полной загрузки страницы
 
@@ -19,8 +20,9 @@
 | Класс | Файл | Ответственность |
 |---|---|---|
 | `CompanyExtractor` | `content_scripts/companyExtractor.js` | Извлечение данных из URL и DOM: извлечение кода компании из URL (`extractCode`), извлечение названия компании из DOM (`extractTitle`). Все методы статические — не зависит от браузерного storage и не выполняет сетевых запросов. |
-| `CompanyApiClient` | `content_scripts/companyApiClient.js` | Отправка данных по REST API: получает код и название компании, читает base URL из настроек (`BrowserStorage`), выполняет POST-запрос к сервису. |
-| `CompanyProcessor` | `content_scripts/companyProcessor.js` | Оркестратор (точка входа): ждёт загрузки страницы, проверяет корректность URL, извлекает данные через `CompanyExtractor.extractCode()` / `extractTitle()`, передаёт их в `CompanyApiClient.sendCompany()`, отображает результат через `MessageControl`. |
+| `CompanyApiClient` | `content_scripts/companyApiClient.js` | Работа с REST API: `sendCompany(code, title)` — POST-запрос добавления компании; `getStatuses(code)` — GET-запрос статусов компании. Base URL читается из настроек (`BrowserStorage`). |
+| `CompanyProcessor` | `content_scripts/companyProcessor.js` | Оркестратор (точка входа): ждёт загрузки страницы, проверяет корректность URL, извлекает данные через `CompanyExtractor.extractCode()` / `extractTitle()`, передаёт их в `CompanyApiClient.sendCompany()`, отображает результат через `MessageControl`, затем запрашивает статусы через `CompanyApiClient.getStatuses()` и выводит их через `StatusBadges`. |
+| `StatusBadges` | `content_scripts/statusBadges.js` | Отображение индикаторов статусов: вставляет после ссылки с названием компании (`.info a.name`) цветные бейджи со значениями `action_industry` и `action_company`. Цвет бейджа зависит от кода статуса. |
 
 ### Поток данных
 
@@ -29,10 +31,24 @@ CompanyProcessor (оркестратор)
     │
     ├── CompanyExtractor (статические методы) → { code, title }
     │
-    └── CompanyApiClient.sendCompany(code, title) → responseText
-            │
-            └── BrowserStorage (base URL из настроек)
+    ├── CompanyApiClient.sendCompany(code, title) → responseText
+    │       │
+    │       └── BrowserStorage (base URL из настроек)
+    │
+    ├── CompanyApiClient.getStatuses(code) → { action_industry, action_company }
+    │
+    └── StatusBadges.render(statuses) → бейджи рядом с названием компании
 ```
+
+### Цвета бейджей статусов
+
+| Статус (`code`) | Значение (`title`) | Цвет бейджа |
+|---|---|---|
+| `unprocessed` | Не обработано | серый |
+| `backlog` | В бэклоге | синий |
+| `in_progress` | В работе | оранжевый |
+| `done` | Завершено | зелёный |
+| `rejected` | Отклонено | красный |
 
 ## Конфигурация
 
@@ -59,7 +75,8 @@ browser-extension/
 │   ├── index.js                                 # Точка входа content-скрипта
 │   ├── companyProcessor.js                      # Оркестратор (проверка страницы → извлечение → отправка → показ)
 │   ├── companyExtractor.js                      # Извлечение данных из URL и DOM
-│   ├── companyApiClient.js                      # Отправка данных по REST API
+│   ├── companyApiClient.js                      # Работа с REST API (добавление компании, получение статусов)
+│   ├── statusBadges.js                          # Индикаторы статусов компании рядом с названием
 │   ├── browserAPI.js                            # Обёртка над browser API
 │   ├── browserStorage.js                        # Работа с chrome.storage.local
 │   └── messageControl.js                        # Всплывающие сообщения
@@ -161,3 +178,23 @@ X-API-Key: {api_key}
 ```
 POST https://example.com/company/add/selectel/Selectel
 X-API-Key: your-api-key-here
+```
+
+### Получение статусов компании
+
+```
+GET {base_url}/company/statuses/{code}
+X-API-Key: {api_key}
+```
+
+Ответ `200 OK`:
+
+```json
+{
+  "code": "otus",
+  "action_industry": { "code": "in_progress", "title": "В работе" },
+  "action_company":  { "code": "backlog",     "title": "В бэклоге" }
+}
+```
+
+Значения `title` выводятся в бейджах рядом с названием компании на странице профиля.
