@@ -9,7 +9,8 @@ INSERT INTO statuses (code, title) VALUES
     ('unprocessed', 'Не обработано'),
     ('backlog',     'В бэклоге'),
     ('in_progress', 'В работе'),
-    ('done',        'Завершено') AS s
+    ('done',        'Завершено'),
+    ('rejected',    'Отклонено') AS s
 ON DUPLICATE KEY UPDATE title = s.title;
 
 CREATE TABLE news (

@@ -14,6 +14,7 @@
 --   backlog      — В бэклоге
 --   in_progress  — В работе
 --   done         — Завершено
+--   rejected     — Отклонено
 -- ============================================================
 
 -- 1) Справочник статусов.
@@ -37,7 +38,8 @@ INSERT INTO statuses (code, title) VALUES
     ('unprocessed', 'Не обработано'),
     ('backlog',     'В бэклоге'),
     ('in_progress', 'В работе'),
-    ('done',        'Завершено') AS s
+    ('done',        'Завершено'),
+    ('rejected',    'Отклонено') AS s
 ON DUPLICATE KEY UPDATE title = s.title;
 
 -- 2) Колонки action_* и FK добавляются идемпотентно. Колонки создаются с

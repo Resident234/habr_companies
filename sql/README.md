@@ -111,6 +111,7 @@ collation `utf8mb4_unicode_ci`; колонки `action_*` и `statuses.code` —
 | `backlog`     | В бэклоге       |
 | `in_progress` | В работе        |
 | `done`        | Завершено       |
+| `rejected`    | Отклонено       |
 
 ---
 
