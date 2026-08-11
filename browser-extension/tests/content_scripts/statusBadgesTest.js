@@ -210,4 +210,72 @@ describe('content_script/statusBadges', function () {
             assert.strictEqual(article.querySelectorAll('.habr-status-badges--post').length, 1);
         });
     });
+
+    describe('#renderPost', function () {
+        const addPostPageTitle = () => {
+            const body = document.createElement('div');
+            body.className = 'article-formatted-body article-formatted-body_version-2';
+            const p = document.createElement('p');
+            const strong = document.createElement('strong');
+            strong.textContent = 'Тестовый пост';
+            p.appendChild(strong);
+            body.appendChild(p);
+            document.body.appendChild(body);
+            return strong;
+        };
+
+        it('should render 5 badges after the title inside .article-formatted-body', () => {
+            const strong = addPostPageTitle();
+            StatusBadges.renderPost(buildArticleStatuses());
+
+            const container = getArticleContainer();
+            assert(container, 'container must exist');
+            assert.strictEqual(strong.nextElementSibling, container);
+
+            const badges = container.querySelectorAll('.habr-status-badge');
+            assert.strictEqual(badges.length, 5);
+
+            const texts = [...container.querySelectorAll('.habr-status-badge__text')]
+                .map(el => el.textContent);
+            assert.deepStrictEqual(texts,
+                ['В работе', 'Завершено', 'В бэклоге', 'Не обработано', 'Отклонено']);
+
+            const titles = [...badges].map(b => b.title);
+            assert(titles.some(t => t === 'Разработка: В работе'));
+            assert(titles.some(t => t === 'Пост: Завершено'));
+            assert(titles.some(t => t === 'Комментарий: В бэклоге'));
+            assert(titles.some(t => t === 'Отрасль: Не обработано'));
+            assert(titles.some(t => t === 'Компания: Отклонено'));
+        });
+
+        it('should fall back to h1.tm-title when no title inside .article-formatted-body', () => {
+            const h1 = addArticleTitle();
+            StatusBadges.renderPost(buildArticleStatuses());
+
+            const container = getArticleContainer();
+            assert(container, 'container must exist');
+            assert.strictEqual(h1.nextElementSibling, container);
+            assert.strictEqual(container.querySelectorAll('.habr-status-badge').length, 5);
+        });
+
+        it('should do nothing when statuses are null', () => {
+            addPostPageTitle();
+            StatusBadges.renderPost(null);
+            assert.strictEqual(getArticleContainer(), null);
+        });
+
+        it('should do nothing when no title found at all', () => {
+            StatusBadges.renderPost(buildArticleStatuses());
+            assert.strictEqual(getArticleContainer(), null);
+        });
+
+        it('should replace previously rendered badges on re-render', () => {
+            addPostPageTitle();
+            StatusBadges.renderPost(buildArticleStatuses());
+            StatusBadges.renderPost(buildArticleStatuses());
+
+            const containers = document.querySelectorAll('#' + StatusBadges.ARTICLE_CONTAINER_ID);
+            assert.strictEqual(containers.length, 1);
+        });
+    });
 });

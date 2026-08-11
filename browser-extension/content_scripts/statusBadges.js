@@ -120,6 +120,62 @@ export class StatusBadges {
         StatusBadges.renderArticle(statuses);
     }
 
+    /**
+     * Рендерит бейджи статусов поста на детальной странице поста
+     * (/ru/companies/{code}/posts/{id}/) инлайн после заголовка внутри
+     * .article-formatted-body (первый параграф с <strong>, либо h1.tm-title).
+     * @param {Object} statuses — ответ API поста:
+     *   { id, company, action_dev, action_post, action_comment, action_industry, action_company }
+     */
+    static renderPost(statuses) {
+        console.log('[StatusBadges.renderPost] Called with:', statuses);
+
+        if (!statuses) {
+            console.log('[StatusBadges.renderPost] No statuses, skipping');
+            return;
+        }
+
+        StatusBadges._removeExistingArticle();
+
+        let title = document.querySelector('.article-formatted-body p strong');
+        console.log('[StatusBadges.renderPost] Title in article-formatted-body found:', title ? 'yes' : 'no');
+
+        if (!title) {
+            title = document.querySelector('h1.tm-title') || document.querySelector('h1');
+            console.log('[StatusBadges.renderPost] Fallback page title found:', title ? 'yes' : 'no');
+        }
+
+        if (!title) {
+            console.warn('[StatusBadges.renderPost] Post title not found in DOM');
+            return;
+        }
+
+        const container = document.createElement('span');
+        container.id = StatusBadges.ARTICLE_CONTAINER_ID;
+        container.className = 'habr-status-badges habr-status-badges--post-page';
+
+        const badges = [
+            { label: 'Разработка', status: statuses.action_dev },
+            { label: 'Пост', status: statuses.action_post },
+            { label: 'Комментарий', status: statuses.action_comment },
+            { label: 'Отрасль', status: statuses.action_industry },
+            { label: 'Компания', status: statuses.action_company },
+        ];
+
+        for (const { label, status } of badges) {
+            if (!status) continue;
+            container.appendChild(StatusBadges._buildBadge(label, status));
+        }
+
+        if (container.childElementCount === 0) {
+            console.log('[StatusBadges.renderPost] No badges to show, skipping');
+            return;
+        }
+
+        title.insertAdjacentElement('afterend', container);
+        console.log('[StatusBadges.renderPost] Badges inserted');
+    }
+
     static _removeExisting() {
         const existing = document.getElementById(StatusBadges.CONTAINER_ID);
         if (existing) existing.remove();

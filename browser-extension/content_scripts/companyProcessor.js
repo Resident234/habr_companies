@@ -33,10 +33,13 @@ export class CompanyProcessor {
 
         const articleMatch = url.pathname.match(/^\/ru\/companies\/([a-zA-Z0-9_-]+)\/articles\/(\d+)\/?$/);
         const newsMatch = url.pathname.match(/^\/ru\/companies\/([a-zA-Z0-9_-]+)\/news\/(\d+)\/?$/);
+        const postMatch = url.pathname.match(/^\/ru\/companies\/([a-zA-Z0-9_-]+)\/posts\/(\d+)\/?$/);
         const postsListMatch = url.pathname.match(/^\/ru\/companies\/([a-zA-Z0-9_-]+)\/posts\/(?:page(\d+)\/?)?$/);
 
         try {
-            if (postsListMatch) {
+            if (postMatch) {
+                await this._initPostPage(postMatch[1], postMatch[2]);
+            } else if (postsListMatch) {
                 await this._initPostsListPage(postsListMatch[1]);
             } else if (articleMatch) {
                 await this._initArticlePage(articleMatch[1], articleMatch[2]);
@@ -85,6 +88,23 @@ export class CompanyProcessor {
         console.log('[CompanyProcessor._initArticlePage] Statuses received:', statuses);
 
         StatusBadges.renderArticle(statuses);
+    }
+
+    async _initPostPage(companyCode, postId) {
+        console.log('[CompanyProcessor._initPostPage] Post page detected, companyCode:', companyCode, 'postId:', postId);
+
+        const response = await this._apiClient.getPostsStatuses(companyCode, [parseInt(postId, 10)]);
+        console.log('[CompanyProcessor._initPostPage] Statuses received:', response);
+
+        if (!response || !Array.isArray(response.posts)) {
+            console.log('[CompanyProcessor._initPostPage] No posts statuses in response, skipping');
+            return;
+        }
+
+        const statuses = response.posts.find(post => Number(post.id) === Number(postId));
+        console.log('[CompanyProcessor._initPostPage] Statuses for post:', statuses);
+
+        StatusBadges.renderPost(statuses);
     }
 
     async _initNewsPage(companyCode, newsId) {
