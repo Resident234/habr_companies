@@ -676,3 +676,252 @@ func TestHTTP_PostsStatuses_DBError(t *testing.T) {
 		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
 	}
 }
+
+// === PATCH /{entity}/statuses/... ===
+
+func withCompanyStatusUpdate(t *testing.T, fn func(code, field string, dir dbop.Direction) (*dbop.UpdateResult, bool, error)) {
+	t.Helper()
+	old := updateCompanyStatus
+	updateCompanyStatus = fn
+	t.Cleanup(func() { updateCompanyStatus = old })
+}
+
+func withArticleStatusUpdate(t *testing.T, fn func(code string, id int64, field string, dir dbop.Direction) (*dbop.UpdateResult, bool, error)) {
+	t.Helper()
+	old := updateArticleStatus
+	updateArticleStatus = fn
+	t.Cleanup(func() { updateArticleStatus = old })
+}
+
+func withNewsStatusUpdate(t *testing.T, fn func(code string, id int64, field string, dir dbop.Direction) (*dbop.UpdateResult, bool, error)) {
+	t.Helper()
+	old := updateNewsStatus
+	updateNewsStatus = fn
+	t.Cleanup(func() { updateNewsStatus = old })
+}
+
+func withPostStatusUpdate(t *testing.T, fn func(code string, id int64, field string, dir dbop.Direction) (*dbop.UpdateResult, bool, error)) {
+	t.Helper()
+	old := updatePostStatus
+	updatePostStatus = fn
+	t.Cleanup(func() { updatePostStatus = old })
+}
+
+func doPatch(t *testing.T, path, apiKey string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPatch, path, nil)
+	if apiKey != "" {
+		req.Header.Set("X-API-Key", apiKey)
+	}
+	rec := httptest.NewRecorder()
+	NewRouter().ServeHTTP(rec, req)
+	return rec
+}
+
+func newTestUpdateResult(field string) *dbop.UpdateResult {
+	return &dbop.UpdateResult{
+		Field: field,
+		From:  &dbop.CompanyStatus{Code: "backlog", Title: "В бэклоге"},
+		To:    &dbop.CompanyStatus{Code: "in_progress", Title: "В работе"},
+	}
+}
+
+func TestHTTP_UpdateCompanyStatus_OK(t *testing.T) {
+	withAPIKey(t)
+	withCompanyStatusUpdate(t, func(code, field string, dir dbop.Direction) (*dbop.UpdateResult, bool, error) {
+		if code != "yandex" || field != "action_company" || dir != dbop.DirectionForward {
+			t.Errorf("unexpected args code=%q field=%q dir=%q", code, field, dir)
+		}
+		return newTestUpdateResult(field), true, nil
+	})
+
+	rec := doPatch(t, "/company/statuses/yandex/action_company/fwd", "test-key")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	var body struct {
+		Code  string `json:"code"`
+		Field string `json:"field"`
+		To    struct {
+			Code string `json:"code"`
+		} `json:"to"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Code != "yandex" || body.Field != "action_company" || body.To.Code != "in_progress" {
+		t.Fatalf("body=%+v", body)
+	}
+}
+
+func TestHTTP_UpdateCompanyStatus_ValidationErrors(t *testing.T) {
+	withAPIKey(t)
+	withCompanyStatusUpdate(t, func(code, field string, dir dbop.Direction) (*dbop.UpdateResult, bool, error) {
+		t.Fatal("updateCompanyStatus must not be called")
+		return nil, false, nil
+	})
+
+	cases := []string{
+		"/company/statuses/bad%20code/action_company/fwd", // невалидный code
+		"/company/statuses/yandex/action_dev/fwd",         // поле недопустимо для компании
+		"/company/statuses/yandex/action_company/up",      // невалидное направление
+		"/company/statuses/yandex/unknown_field/fwd",      // неизвестное поле
+	}
+	for _, path := range cases {
+		rec := doPatch(t, path, "test-key")
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("path=%q status=%d body=%s", path, rec.Code, rec.Body.String())
+		}
+	}
+}
+
+func TestHTTP_UpdateCompanyStatus_NotFound(t *testing.T) {
+	withAPIKey(t)
+	withCompanyStatusUpdate(t, func(code, field string, dir dbop.Direction) (*dbop.UpdateResult, bool, error) {
+		return nil, false, nil
+	})
+
+	rec := doPatch(t, "/company/statuses/unknown/action_company/back", "test-key")
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHTTP_UpdateCompanyStatus_Conflict(t *testing.T) {
+	withAPIKey(t)
+	withCompanyStatusUpdate(t, func(code, field string, dir dbop.Direction) (*dbop.UpdateResult, bool, error) {
+		return nil, false, dbop.ErrStatusConflict
+	})
+
+	rec := doPatch(t, "/company/statuses/yandex/action_company/fwd", "test-key")
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHTTP_UpdateCompanyStatus_DBError(t *testing.T) {
+	withAPIKey(t)
+	withCompanyStatusUpdate(t, func(code, field string, dir dbop.Direction) (*dbop.UpdateResult, bool, error) {
+		return nil, false, fmt.Errorf("boom")
+	})
+
+	rec := doPatch(t, "/company/statuses/yandex/action_company/fwd", "test-key")
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHTTP_UpdateCompanyStatus_WrongKey(t *testing.T) {
+	withAPIKey(t)
+	withCompanyStatusUpdate(t, func(code, field string, dir dbop.Direction) (*dbop.UpdateResult, bool, error) {
+		t.Fatal("updateCompanyStatus must not be called")
+		return nil, false, nil
+	})
+
+	rec := doPatch(t, "/company/statuses/yandex/action_company/fwd", "wrong-key")
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHTTP_UpdateArticleStatus_OK(t *testing.T) {
+	withAPIKey(t)
+	withArticleStatusUpdate(t, func(code string, id int64, field string, dir dbop.Direction) (*dbop.UpdateResult, bool, error) {
+		if code != "wirenboard" || id != 1067190 || field != "action_post" || dir != dbop.DirectionBack {
+			t.Errorf("unexpected args code=%q id=%d field=%q dir=%q", code, id, field, dir)
+		}
+		return newTestUpdateResult(field), true, nil
+	})
+
+	rec := doPatch(t, "/article/statuses/wirenboard/1067190/action_post/back", "test-key")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	var body struct {
+		ID      int64  `json:"id"`
+		Company string `json:"company"`
+		To      struct {
+			Code string `json:"code"`
+		} `json:"to"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.ID != 1067190 || body.Company != "wirenboard" || body.To.Code != "in_progress" {
+		t.Fatalf("body=%+v", body)
+	}
+}
+
+func TestHTTP_UpdateArticleStatus_ValidationErrors(t *testing.T) {
+	withAPIKey(t)
+	withArticleStatusUpdate(t, func(code string, id int64, field string, dir dbop.Direction) (*dbop.UpdateResult, bool, error) {
+		t.Fatal("updateArticleStatus must not be called")
+		return nil, false, nil
+	})
+
+	cases := []string{
+		"/article/statuses/bad%20code/1067190/action_post/fwd",
+		"/article/statuses/wirenboard/abc/action_post/fwd",
+		"/article/statuses/wirenboard/0/action_post/fwd",
+		"/article/statuses/wirenboard/1067190/unknown/fwd",
+		"/article/statuses/wirenboard/1067190/action_post/skip",
+	}
+	for _, path := range cases {
+		rec := doPatch(t, path, "test-key")
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("path=%q status=%d body=%s", path, rec.Code, rec.Body.String())
+		}
+	}
+}
+
+func TestHTTP_UpdateNewsStatus_OK(t *testing.T) {
+	withAPIKey(t)
+	withNewsStatusUpdate(t, func(code string, id int64, field string, dir dbop.Direction) (*dbop.UpdateResult, bool, error) {
+		if code != "infostart" || id != 1067864 || field != "action_dev" || dir != dbop.DirectionForward {
+			t.Errorf("unexpected args code=%q id=%d field=%q dir=%q", code, id, field, dir)
+		}
+		return newTestUpdateResult(field), true, nil
+	})
+
+	rec := doPatch(t, "/news/statuses/infostart/1067864/action_dev/fwd", "test-key")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHTTP_UpdatePostStatus_OK(t *testing.T) {
+	withAPIKey(t)
+	withPostStatusUpdate(t, func(code string, id int64, field string, dir dbop.Direction) (*dbop.UpdateResult, bool, error) {
+		if code != "k2tech" || id != 1044134 || field != "action_comment" || dir != dbop.DirectionBack {
+			t.Errorf("unexpected args code=%q id=%d field=%q dir=%q", code, id, field, dir)
+		}
+		return newTestUpdateResult(field), true, nil
+	})
+
+	rec := doPatch(t, "/post/statuses/k2tech/1044134/action_comment/back", "test-key")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	var body struct {
+		ID      int64  `json:"id"`
+		Company string `json:"company"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.ID != 1044134 || body.Company != "k2tech" {
+		t.Fatalf("body=%+v", body)
+	}
+}
+
+func TestHTTP_UpdatePostStatus_NotFound(t *testing.T) {
+	withAPIKey(t)
+	withPostStatusUpdate(t, func(code string, id int64, field string, dir dbop.Direction) (*dbop.UpdateResult, bool, error) {
+		return nil, false, nil
+	})
+
+	rec := doPatch(t, "/post/statuses/k2tech/999/action_post/fwd", "test-key")
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}

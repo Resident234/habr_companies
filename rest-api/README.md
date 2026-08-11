@@ -241,6 +241,73 @@ curl "http://localhost:8080/posts/statuses/avito?ids=1026612,1025000" \
   -H "X-API-Key: my-secret-key"
 ```
 
+### Смена статуса (шаг вперёд / назад)
+
+```text
+PATCH /{entity}/statuses/.../{field}/{direction}
+X-API-Key: <секретный-ключ>
+```
+
+Сдвигает статус на один шаг вперёд или назад по фиксированному порядку:
+
+```
+unprocessed → backlog → in_progress → done → rejected
+ (Не обработано) (В бэклоге)  (В работе)  (Завершено) (Отклонено)
+```
+
+Chrome-расширение вызывает эти эндпоинты при нажатии кнопок «◀ Назад» /
+«Вперёд ▶» рядом с бейджами статусов.
+
+**Маршруты по сущностям:**
+
+| Таблица    | Маршрут |
+|------------|---------|
+| `companies` | `PATCH /company/statuses/{code}/{field}/{direction}` |
+| `articles`  | `PATCH /article/statuses/{companyCode}/{articleId}/{field}/{direction}` |
+| `news`      | `PATCH /news/statuses/{companyCode}/{newsId}/{field}/{direction}` |
+| `posts`     | `PATCH /post/statuses/{companyCode}/{postId}/{field}/{direction}` |
+
+**Параметры пути:**
+
+- `code` / `companyCode` — латинские буквы, цифры, `_`, `-`, 1–255 символов;
+- `articleId` / `newsId` / `postId` — положительное целое число;
+- `field` — имя action-колонки: `action_dev`, `action_post`, `action_comment`,
+  `action_industry`, `action_company`. Для компании (`/company/...`) допустимы
+  только `action_industry` и `action_company`;
+- `direction` — `fwd` (следующий статус) или `back` (предыдущий).
+
+**Ответы:**
+
+- `200 OK` — статус успешно изменён;
+- `400 Bad Request` — невалидные параметры (`code`, `id`, `field`, `direction`);
+- `401 Unauthorized` — неверный или отсутствующий API-ключ;
+- `404 Not Found` — сущность (компания/статья/новость/пост) не найдена;
+- `409 Conflict` — статус уже находится на крайнем значении (шаг невозможен)
+  или был изменён параллельно другим запросом;
+- `500 Internal Server Error` — ошибка сервера.
+
+**Формат ответа `200 OK`:**
+
+```json
+{
+  "code": "yandex",
+  "field": "action_company",
+  "from": { "code": "backlog",     "title": "В бэклоге" },
+  "to":   { "code": "in_progress", "title": "В работе" }
+}
+```
+
+Для контентных сущностей (`article`, `news`, `post`) вместо `code` возвращаются
+поля `id` (идентификатор записи) и `company` (код компании).
+
+**Пример:**
+
+```bash
+curl -X PATCH \
+  "http://localhost:8080/article/statuses/wirenboard/1067190/action_post/fwd" \
+  -H "X-API-Key: my-secret-key"
+```
+
 ## Запуск на Windows
 
 ### В GoLand / IntelliJ IDEA
@@ -456,3 +523,25 @@ CREATE TABLE statuses (
 справочник `statuses`. Пакетный эндпоинт `GET /posts/statuses/{companyCode}?ids=...`
 возвращает статусы сразу нескольких постов одним запросом (см.
 [API](#пакетное-получение-статусов-постов)).
+
+### Порядок статусов и их смена
+
+Все статусы упорядочены фиксированной цепочкой:
+
+```
+unprocessed → backlog → in_progress → done → rejected
+```
+
+Эндпоинты `PATCH /{entity}/statuses/.../{field}/{direction}` (см.
+[API](#смена-статуса-шаг-вперёд--назад)) сдвигают значение action-колонки на один
+шаг вперёд (`fwd`) или назад (`back`) по этой цепочке.
+
+Смена выполняется в две операции внутри одного соединения:
+
+1. Чтение текущего кода статуса из соответствующей таблицы;
+2. Атомарное обновление с условием `... AND {field} = '<старый-код>'` — если за
+   время между чтением и записью кто-то другой уже изменил статус, запрос вернёт
+   `409 Conflict`, а клиент (Chrome-расширение) перезапросит актуальные статусы.
+
+Если статус уже находится на краю цепочки (`unprocessed` при шаге назад или
+`rejected` при шаге вперёд), также возвращается `409 Conflict`.

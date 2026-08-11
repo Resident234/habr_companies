@@ -32,6 +32,18 @@ var getNewsStatuses = dbop.GetNewsStatuses
 // getPostsStatuses вызывается из обработчика; подменяется в тестах.
 var getPostsStatuses = dbop.GetPostsStatuses
 
+// updateCompanyStatus вызывается из обработчика; подменяется в тестах.
+var updateCompanyStatus = dbop.UpdateCompanyStatus
+
+// updateArticleStatus вызывается из обработчика; подменяется в тестах.
+var updateArticleStatus = dbop.UpdateArticleStatus
+
+// updateNewsStatus вызывается из обработчика; подменяется в тестах.
+var updateNewsStatus = dbop.UpdateNewsStatus
+
+// updatePostStatus вызывается из обработчика; подменяется в тестах.
+var updatePostStatus = dbop.UpdatePostStatus
+
 // maxBatchIDs должно совпадать с лимитом в dbOp.GetPostsStatuses.
 const maxBatchIDs = 100
 
@@ -247,6 +259,136 @@ func getPostsStatusesHandler(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, statuses)
 }
 
+// parseOptionalPostID парсит необязательный id (для компании его нет).
+// Возвращает 0, если idStr пуст.
+func parseOptionalPostID(w http.ResponseWriter, idStr, entityLabel string) (int64, bool) {
+	if idStr == "" {
+		return 0, true
+	}
+	if !idRegex.MatchString(idStr) {
+		respondError(w, http.StatusBadRequest, "invalid "+entityLabel+" id: must be a positive integer")
+		return 0, false
+	}
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil || id <= 0 {
+		respondError(w, http.StatusBadRequest, "invalid "+entityLabel+" id: must be a positive integer")
+		return 0, false
+	}
+	return id, true
+}
+
+// statusUpdateFunc — тип функции обновления статуса в нужной таблице.
+type statusUpdateFunc func(code string, id int64, field string, dir dbop.Direction) (*dbop.UpdateResult, bool, error)
+
+// updateCompanyStatusHandler обрабатывает PATCH /company/statuses/{code}/{field}/{direction}.
+// Переключает action_industry или action_company компании на соседний статус.
+func updateCompanyStatusHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	code := vars["code"]
+	field := vars["field"]
+	dir := dbop.Direction(vars["direction"])
+
+	if !validateCode(code) {
+		respondError(w, http.StatusBadRequest, "invalid code: must be 1-255 chars, only latin letters, digits, _, -")
+		return
+	}
+	if !dbop.ValidCompanyStatusField(field) {
+		respondError(w, http.StatusBadRequest, "invalid field: allowed action_industry, action_company")
+		return
+	}
+	if !dbop.ValidStatusDirection(dir) {
+		respondError(w, http.StatusBadRequest, "invalid direction: allowed back, fwd")
+		return
+	}
+
+	result, found, err := updateCompanyStatus(code, field, dir)
+	if err == dbop.ErrStatusConflict {
+		respondError(w, http.StatusConflict, "status changed concurrently, retry")
+		return
+	}
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "database error")
+		return
+	}
+	if !found {
+		respondError(w, http.StatusNotFound, "company not found")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"code":  code,
+		"field": result.Field,
+		"from":  result.From,
+		"to":    result.To,
+	})
+}
+
+// updateContentStatus — общая логика PATCH-эндпоинтов статьи, новости и поста.
+func updateContentStatus(w http.ResponseWriter, r *http.Request,
+	companyVar, idVar, entityLabel string,
+	update statusUpdateFunc) {
+
+	vars := mux.Vars(r)
+	code := vars[companyVar]
+	idStr := vars[idVar]
+	field := vars["field"]
+	dir := dbop.Direction(vars["direction"])
+
+	if !validateCode(code) {
+		respondError(w, http.StatusBadRequest, "invalid company code: must be 1-255 chars, only latin letters, digits, _, -")
+		return
+	}
+	id, ok := parseOptionalPostID(w, idStr, entityLabel)
+	if !ok {
+		return
+	}
+	if !dbop.ValidContentStatusField(field) {
+		respondError(w, http.StatusBadRequest, "invalid field: allowed action_dev, action_post, action_comment, action_industry, action_company")
+		return
+	}
+	if !dbop.ValidStatusDirection(dir) {
+		respondError(w, http.StatusBadRequest, "invalid direction: allowed back, fwd")
+		return
+	}
+
+	result, found, err := update(code, id, field, dir)
+	if err == dbop.ErrStatusConflict {
+		respondError(w, http.StatusConflict, "status changed concurrently, retry")
+		return
+	}
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "database error")
+		return
+	}
+	if !found {
+		respondError(w, http.StatusNotFound, entityLabel+" not found")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"id":      id,
+		"company": code,
+		"field":   result.Field,
+		"from":    result.From,
+		"to":      result.To,
+	})
+}
+
+// updateArticleStatusHandler обрабатывает PATCH /article/statuses/{companyCode}/{articleId}/{field}/{direction}.
+func updateArticleStatusHandler(w http.ResponseWriter, r *http.Request) {
+	updateContentStatus(w, r, "companyCode", "articleId", "article", updateArticleStatus)
+}
+
+// updateNewsStatusHandler обрабатывает PATCH /news/statuses/{companyCode}/{newsId}/{field}/{direction}.
+func updateNewsStatusHandler(w http.ResponseWriter, r *http.Request) {
+	updateContentStatus(w, r, "companyCode", "newsId", "news", updateNewsStatus)
+}
+
+// updatePostStatusHandler обрабатывает PATCH /post/statuses/{companyCode}/{postId}/{field}/{direction}.
+func updatePostStatusHandler(w http.ResponseWriter, r *http.Request) {
+	updateContentStatus(w, r, "companyCode", "postId", "post", updatePostStatus)
+}
+
 // NewRouter настраивает маршруты (удобно для HTTP-тестов и запуска из operate).
 func NewRouter() http.Handler {
 	r := mux.NewRouter()
@@ -255,5 +397,9 @@ func NewRouter() http.Handler {
 	r.Handle("/article/statuses/{companyCode}/{articleId}", middleware.APIKeyAuth(http.HandlerFunc(getArticleStatusesHandler))).Methods("GET")
 	r.Handle("/news/statuses/{companyCode}/{newsId}", middleware.APIKeyAuth(http.HandlerFunc(getNewsStatusesHandler))).Methods("GET")
 	r.Handle("/posts/statuses/{companyCode}", middleware.APIKeyAuth(http.HandlerFunc(getPostsStatusesHandler))).Methods("GET")
+	r.Handle("/company/statuses/{code}/{field}/{direction}", middleware.APIKeyAuth(http.HandlerFunc(updateCompanyStatusHandler))).Methods("PATCH")
+	r.Handle("/article/statuses/{companyCode}/{articleId}/{field}/{direction}", middleware.APIKeyAuth(http.HandlerFunc(updateArticleStatusHandler))).Methods("PATCH")
+	r.Handle("/news/statuses/{companyCode}/{newsId}/{field}/{direction}", middleware.APIKeyAuth(http.HandlerFunc(updateNewsStatusHandler))).Methods("PATCH")
+	r.Handle("/post/statuses/{companyCode}/{postId}/{field}/{direction}", middleware.APIKeyAuth(http.HandlerFunc(updatePostStatusHandler))).Methods("PATCH")
 	return r
 }
