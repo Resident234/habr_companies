@@ -140,4 +140,74 @@ describe('content_script/statusBadges', function () {
             assert.strictEqual(containers.length, 1);
         });
     });
+
+    describe('#renderPostInList', function () {
+        const addPostArticle = (id) => {
+            const list = document.createElement('div');
+            list.className = 'tm-articles-list';
+
+            const article = document.createElement('article');
+            article.id = String(id);
+
+            const h2 = document.createElement('h2');
+            h2.className = 'tm-title tm-title_h2';
+            const span = document.createElement('span');
+            span.textContent = 'Тестовый пост ' + id;
+            h2.appendChild(span);
+
+            article.appendChild(h2);
+            list.appendChild(article);
+            document.body.appendChild(list);
+            return article;
+        };
+
+        it('should render 5 badges after the post title in the articles list', () => {
+            const article = addPostArticle(1044134);
+            StatusBadges.renderPostInList(article, buildArticleStatuses());
+
+            const container = article.querySelector('.habr-status-badges--post');
+            assert(container, 'container must exist');
+
+            const badges = container.querySelectorAll('.habr-status-badge');
+            assert.strictEqual(badges.length, 5);
+
+            const texts = [...container.querySelectorAll('.habr-status-badge__text')]
+                .map(el => el.textContent);
+            assert.deepStrictEqual(texts,
+                ['В работе', 'Завершено', 'В бэклоге', 'Не обработано', 'Отклонено']);
+
+            const titles = [...badges].map(b => b.title);
+            assert(titles.some(t => t === 'Разработка: В работе'));
+            assert(titles.some(t => t === 'Пост: Завершено'));
+            assert(titles.some(t => t === 'Комментарий: В бэклоге'));
+            assert(titles.some(t => t === 'Отрасль: Не обработано'));
+            assert(titles.some(t => t === 'Компания: Отклонено'));
+        });
+
+        it('should do nothing when statuses are null', () => {
+            const article = addPostArticle(1044134);
+            StatusBadges.renderPostInList(article, null);
+            assert.strictEqual(article.querySelector('.habr-status-badges--post'), null);
+        });
+
+        it('should render badges for several posts independently', () => {
+            const first = addPostArticle(1);
+            const second = addPostArticle(2);
+
+            StatusBadges.renderPostInList(first, buildArticleStatuses());
+            StatusBadges.renderPostInList(second, buildArticleStatuses());
+
+            assert.strictEqual(document.querySelectorAll('.habr-status-badges--post').length, 2);
+            assert(first.querySelector('.habr-status-badges--post'));
+            assert(second.querySelector('.habr-status-badges--post'));
+        });
+
+        it('should replace previously rendered badges on re-render', () => {
+            const article = addPostArticle(1044134);
+            StatusBadges.renderPostInList(article, buildArticleStatuses());
+            StatusBadges.renderPostInList(article, buildArticleStatuses());
+
+            assert.strictEqual(article.querySelectorAll('.habr-status-badges--post').length, 1);
+        });
+    });
 });

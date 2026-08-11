@@ -130,6 +130,59 @@ export class StatusBadges {
         if (existing) existing.remove();
     }
 
+    /**
+     * Рендерит бейджи статусов поста рядом с его заголовком в списке постов
+     * (article с атрибутом id, равным id поста, внутри .tm-articles-list).
+     * @param {Element} articleElement — тег article поста
+     * @param {Object} statuses — ответ API поста:
+     *   { id, company, action_dev, action_post, action_comment, action_industry, action_company }
+     */
+    static renderPostInList(articleElement, statuses) {
+        console.log('[StatusBadges.renderPostInList] Called for post:', statuses && statuses.id);
+
+        if (!articleElement || !statuses) {
+            console.log('[StatusBadges.renderPostInList] No article element or statuses, skipping');
+            return;
+        }
+
+        const title = articleElement.querySelector('.tm-title')
+            || articleElement.querySelector('h2')
+            || articleElement.querySelector('h3');
+        console.log('[StatusBadges.renderPostInList] Post title found:', title ? 'yes' : 'no');
+
+        if (!title) {
+            console.warn('[StatusBadges.renderPostInList] Post title not found in article', statuses.id);
+            return;
+        }
+
+        const containerClass = 'habr-status-badges--post';
+        articleElement.querySelectorAll('.' + containerClass).forEach(el => el.remove());
+
+        const container = document.createElement('span');
+        container.className = 'habr-status-badges ' + containerClass;
+
+        const badges = [
+            { label: 'Разработка', status: statuses.action_dev },
+            { label: 'Пост', status: statuses.action_post },
+            { label: 'Комментарий', status: statuses.action_comment },
+            { label: 'Отрасль', status: statuses.action_industry },
+            { label: 'Компания', status: statuses.action_company },
+        ];
+
+        for (const { label, status } of badges) {
+            if (!status) continue;
+            container.appendChild(StatusBadges._buildBadge(label, status));
+        }
+
+        if (container.childElementCount === 0) {
+            console.log('[StatusBadges.renderPostInList] No badges to show, skipping');
+            return;
+        }
+
+        title.insertAdjacentElement('afterend', container);
+        console.log('[StatusBadges.renderPostInList] Badges inserted for post:', statuses.id);
+    }
+
     static _buildBadge(label, status) {
         const badge = document.createElement('span');
         badge.className = `habr-status-badge habr-status-badge--${StatusBadges._sanitizeCode(status.code)}`;

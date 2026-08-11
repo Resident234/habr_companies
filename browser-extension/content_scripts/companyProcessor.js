@@ -33,9 +33,12 @@ export class CompanyProcessor {
 
         const articleMatch = url.pathname.match(/^\/ru\/companies\/([a-zA-Z0-9_-]+)\/articles\/(\d+)\/?$/);
         const newsMatch = url.pathname.match(/^\/ru\/companies\/([a-zA-Z0-9_-]+)\/news\/(\d+)\/?$/);
+        const postsListMatch = url.pathname.match(/^\/ru\/companies\/([a-zA-Z0-9_-]+)\/posts\/(?:page(\d+)\/?)?$/);
 
         try {
-            if (articleMatch) {
+            if (postsListMatch) {
+                await this._initPostsListPage(postsListMatch[1]);
+            } else if (articleMatch) {
                 await this._initArticlePage(articleMatch[1], articleMatch[2]);
             } else if (newsMatch) {
                 await this._initNewsPage(newsMatch[1], newsMatch[2]);
@@ -91,6 +94,42 @@ export class CompanyProcessor {
         console.log('[CompanyProcessor._initNewsPage] Statuses received:', statuses);
 
         StatusBadges.renderNews(statuses);
+    }
+
+    async _initPostsListPage(companyCode) {
+        console.log('[CompanyProcessor._initPostsListPage] Posts list page detected, companyCode:', companyCode);
+
+        const articles = [...document.querySelectorAll('.tm-articles-list article[id]')];
+        console.log('[CompanyProcessor._initPostsListPage] Found articles:', articles.length);
+
+        const items = articles
+            .map(el => ({ element: el, id: parseInt(el.id, 10) }))
+            .filter(item => Number.isInteger(item.id) && item.id > 0);
+
+        console.log('[CompanyProcessor._initPostsListPage] Valid post ids:', items.map(i => i.id));
+
+        if (items.length === 0) {
+            console.log('[CompanyProcessor._initPostsListPage] No posts found on page, skipping');
+            return;
+        }
+
+        const response = await this._apiClient.getPostsStatuses(companyCode, items.map(i => i.id));
+        console.log('[CompanyProcessor._initPostsListPage] Statuses received:', response);
+
+        if (!response || !Array.isArray(response.posts)) {
+            console.log('[CompanyProcessor._initPostsListPage] No posts statuses in response, skipping');
+            return;
+        }
+
+        const byId = new Map(response.posts.map(post => [Number(post.id), post]));
+        let rendered = 0;
+        for (const item of items) {
+            const statuses = byId.get(item.id);
+            if (!statuses) continue;
+            StatusBadges.renderPostInList(item.element, statuses);
+            rendered++;
+        }
+        console.log('[CompanyProcessor._initPostsListPage] Badges rendered for posts:', rendered);
     }
 
     _isCorrectPage() {

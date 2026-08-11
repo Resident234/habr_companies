@@ -52,6 +52,26 @@
     margin: 8px 0 12px 0 !important;
 }
 
+/* Бейджи поста в списке постов компании — после заголовка, компактнее */
+.habr-status-badges--post {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+    margin: 6px 0 !important;
+    max-width: 100% !important;
+}
+
+.habr-status-badges--post .habr-status-badge {
+    padding: 1px 8px !important;
+    font-size: 11px !important;
+    line-height: 1.5 !important;
+}
+
+.habr-status-badges--post .habr-status-badge__dot {
+    width: 6px !important;
+    height: 6px !important;
+}
+
 .habr-status-badge {
     display: inline-flex !important;
     align-items: center !important;
