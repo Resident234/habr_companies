@@ -188,6 +188,59 @@ curl "http://localhost:8080/news/statuses/infostart/1067864" \
   -H "X-API-Key: my-secret-key"
 ```
 
+### Пакетное получение статусов постов
+
+```text
+GET /posts/statuses/{companyCode}?ids=1,2,3
+X-API-Key: <секретный-ключ>
+```
+
+Возвращает статусы сразу нескольких постов из таблицы `posts` одним запросом —
+используется Chrome-расширением на странице списка постов компании
+(`https://habr.com/ru/companies/{code}/posts/`), чтобы не делать отдельный
+запрос на каждый пост.
+
+- `companyCode` — латинские буквы, цифры, `_`, `-`, 1–255 символов;
+- `ids` — query-параметр: непустой список id постов через запятую, максимум 100 штук;
+  дубликаты и пробелы вокруг значений игнорируются.
+
+**Ответы:**
+
+- `200 OK` — статусы найденных постов (посты, отсутствующие в таблице `posts`,
+  просто не включаются в ответ — поэтому `404 Not Found` у этого эндпоинта нет);
+- `400 Bad Request` — невалидный `companyCode`, пустой `ids`, невалидный id или
+  больше 100 id в запросе;
+- `401 Unauthorized` — неверный или отсутствующий API-ключ;
+- `500 Internal Server Error` — ошибка сервера.
+
+**Формат ответа `200 OK`:**
+
+```json
+{
+  "company": "avito",
+  "posts": [
+    {
+      "id": 1026612,
+      "company": "avito",
+      "action_dev":      { "code": "in_progress", "title": "В работе" },
+      "action_post":     { "code": "done",        "title": "Завершено" },
+      "action_comment":  { "code": "backlog",     "title": "В бэклоге" },
+      "action_industry": { "code": "unprocessed", "title": "Не обработано" },
+      "action_company":  { "code": "rejected",    "title": "Отклонено" }
+    }
+  ]
+}
+```
+
+`title` каждого статуса подтягивается из связанной таблицы `statuses`.
+
+**Пример:**
+
+```bash
+curl "http://localhost:8080/posts/statuses/avito?ids=1026612,1025000" \
+  -H "X-API-Key: my-secret-key"
+```
+
 ## Запуск на Windows
 
 ### В GoLand / IntelliJ IDEA
@@ -395,3 +448,11 @@ CREATE TABLE statuses (
 `statuses` (миграция `sql/create_statuses_and_action_columns.sql`). Эндпоинт
 `GET /article/statuses/{companyCode}/{articleId}` возвращает их вместе с
 человекочитаемыми `title` (см. [API](#получение-статусов-статьи)).
+
+### Статусы постов
+
+Таблица `posts` содержит ту же пятёрку action-колонок (`action_dev`,
+`action_post`, `action_comment`, `action_industry`, `action_company`) — FK на
+справочник `statuses`. Пакетный эндпоинт `GET /posts/statuses/{companyCode}?ids=...`
+возвращает статусы сразу нескольких постов одним запросом (см.
+[API](#пакетное-получение-статусов-постов)).
