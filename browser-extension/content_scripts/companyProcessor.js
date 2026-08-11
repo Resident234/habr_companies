@@ -32,10 +32,13 @@ export class CompanyProcessor {
         }
 
         const articleMatch = url.pathname.match(/^\/ru\/companies\/([a-zA-Z0-9_-]+)\/articles\/(\d+)\/?$/);
+        const newsMatch = url.pathname.match(/^\/ru\/companies\/([a-zA-Z0-9_-]+)\/news\/(\d+)\/?$/);
 
         try {
             if (articleMatch) {
                 await this._initArticlePage(articleMatch[1], articleMatch[2]);
+            } else if (newsMatch) {
+                await this._initNewsPage(newsMatch[1], newsMatch[2]);
             } else {
                 await this._initCompanyPage();
             }
@@ -79,6 +82,15 @@ export class CompanyProcessor {
         console.log('[CompanyProcessor._initArticlePage] Statuses received:', statuses);
 
         StatusBadges.renderArticle(statuses);
+    }
+
+    async _initNewsPage(companyCode, newsId) {
+        console.log('[CompanyProcessor._initNewsPage] News page detected, companyCode:', companyCode, 'newsId:', newsId);
+
+        const statuses = await this._apiClient.getNewsStatuses(companyCode, newsId);
+        console.log('[CompanyProcessor._initNewsPage] Statuses received:', statuses);
+
+        StatusBadges.renderNews(statuses);
     }
 
     _isCorrectPage() {

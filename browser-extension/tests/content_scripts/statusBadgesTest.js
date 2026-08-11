@@ -84,4 +84,60 @@ describe('content_script/statusBadges', function () {
             assert.strictEqual(containers.length, 1);
         });
     });
+
+    describe('#renderNews', function () {
+        const buildNewsStatuses = () => ({
+            id: 1067864,
+            company: 'infostart',
+            action_dev: { code: 'in_progress', title: 'В работе' },
+            action_post: { code: 'done', title: 'Завершено' },
+            action_comment: { code: 'backlog', title: 'В бэклоге' },
+            action_industry: { code: 'unprocessed', title: 'Не обработано' },
+            action_company: { code: 'rejected', title: 'Отклонено' },
+        });
+
+        it('should render 5 badges after the news title with titles from statuses', () => {
+            const h1 = addArticleTitle();
+            StatusBadges.renderNews(buildNewsStatuses());
+
+            const container = getArticleContainer();
+            assert(container, 'container must exist');
+            assert.strictEqual(h1.nextElementSibling, container);
+
+            const badges = container.querySelectorAll('.habr-status-badge');
+            assert.strictEqual(badges.length, 5);
+
+            const texts = [...container.querySelectorAll('.habr-status-badge__text')]
+                .map(el => el.textContent);
+            assert.deepStrictEqual(texts,
+                ['В работе', 'Завершено', 'В бэклоге', 'Не обработано', 'Отклонено']);
+
+            const titles = [...badges].map(b => b.title);
+            assert(titles.some(t => t === 'Разработка: В работе'));
+            assert(titles.some(t => t === 'Пост: Завершено'));
+            assert(titles.some(t => t === 'Комментарий: В бэклоге'));
+            assert(titles.some(t => t === 'Отрасль: Не обработано'));
+            assert(titles.some(t => t === 'Компания: Отклонено'));
+        });
+
+        it('should do nothing when statuses are null', () => {
+            addArticleTitle();
+            StatusBadges.renderNews(null);
+            assert.strictEqual(getArticleContainer(), null);
+        });
+
+        it('should do nothing when the news title is missing', () => {
+            StatusBadges.renderNews(buildNewsStatuses());
+            assert.strictEqual(getArticleContainer(), null);
+        });
+
+        it('should replace previously rendered badges on re-render', () => {
+            addArticleTitle();
+            StatusBadges.renderNews(buildNewsStatuses());
+            StatusBadges.renderNews(buildNewsStatuses());
+
+            const containers = document.querySelectorAll('#' + StatusBadges.ARTICLE_CONTAINER_ID);
+            assert.strictEqual(containers.length, 1);
+        });
+    });
 });

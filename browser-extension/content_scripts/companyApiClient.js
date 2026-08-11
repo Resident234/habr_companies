@@ -172,6 +172,58 @@ export class CompanyApiClient {
         }
     }
 
+    async getNewsStatuses(companyCode, newsId) {
+        console.log('[CompanyApiClient.getNewsStatuses] Called with companyCode:', companyCode, 'newsId:', newsId);
+
+        const baseUrl = await this._getBaseUrl();
+        const url = `${baseUrl}/news/statuses/${encodeURIComponent(companyCode)}/${encodeURIComponent(newsId)}`;
+        console.log('[CompanyApiClient.getNewsStatuses] Full request URL:', url);
+
+        try {
+            const response = await new Promise((resolve, reject) => {
+                const port = chrome.runtime.connect({ name: 'fetch' });
+                let settled = false;
+
+                port.onMessage.addListener((msg) => {
+                    settled = true;
+                    port.disconnect();
+                    resolve(msg);
+                });
+
+                port.onDisconnect.addListener(() => {
+                    if (settled) return;
+                    const error = chrome.runtime.lastError;
+                    reject(new Error(error?.message || 'Background port closed unexpectedly'));
+                });
+
+                port.postMessage({
+                    type: 'FETCH_REQUEST',
+                    url: url,
+                    method: 'GET',
+                    headers: {
+                        'X-API-Key': CONFIG.API_KEY,
+                        'Content-Type': 'application/json'
+                    }
+                });
+            });
+
+            console.log('[CompanyApiClient.getNewsStatuses] Response status:', response.status);
+            console.log('[CompanyApiClient.getNewsStatuses] Response body:', response.body);
+
+            if (response.error) throw new Error(response.error);
+
+            if (!response.ok) {
+                console.warn('[CompanyApiClient.getNewsStatuses] Non-ok response:', response.status);
+                return null;
+            }
+
+            return JSON.parse(response.body);
+        } catch (error) {
+            console.error('[CompanyApiClient.getNewsStatuses] Fetch failed:', error);
+            return null;
+        }
+    }
+
     async _getBaseUrl() {
         const prefs = await this._storage.get();
         return (prefs && prefs.base_url) ? prefs.base_url : CONFIG.DEFAULT_BASE_URL;

@@ -11,6 +11,7 @@
 - **Отображение ответа** — ответ сервиса выводится во всплывающем сообщении на странице через `MessageControl`
 - **Индикаторы статусов компании** — после отправки данных запрашиваются статусы (`GET {base_url}/company/statuses/{code}`) и рядом с названием компании выводятся цветные бейджи со значениями `action_industry` и `action_company` (человекочитаемые `title` из справочника `statuses`)
 - **Индикаторы статусов статьи** — на детальной странице статьи (`https://habr.com/ru/companies/{code}/articles/{id}/`) запрашиваются статусы (`GET {base_url}/article/statuses/{code}/{id}`) и под заголовком статьи (`h1.tm-title`) выводятся цветные бейджи со значениями `action_dev`, `action_post`, `action_comment`, `action_industry` и `action_company` (человекочитаемые `title` из справочника `statuses`; tooltip бейджа уточняет название поля: «Разработка», «Пост», «Комментарий», «Отрасль», «Компания»)
+- **Индикаторы статусов новости** — на детальной странице новости (`https://habr.com/ru/companies/{code}/news/{id}/`) запрашиваются статусы (`GET {base_url}/news/statuses/{code}/{id}`) и под заголовком новости (`h1.tm-title`) выводятся те же цветные бейджи с пятью action-полями
 - **Настройка адреса сервиса** — URL сервиса можно изменить на странице настроек расширения
 - **Автоматический запуск** — запрос отправляется после полной загрузки страницы
 
@@ -22,8 +23,8 @@
 |---|---|---|
 | `CompanyExtractor` | `content_scripts/companyExtractor.js` | Извлечение данных из URL и DOM: извлечение кода компании из URL (`extractCode`), извлечение названия компании из DOM (`extractTitle`). Все методы статические — не зависит от браузерного storage и не выполняет сетевых запросов. |
 | `CompanyApiClient` | `content_scripts/companyApiClient.js` | Работа с REST API: `sendCompany(code, title)` — POST-запрос добавления компании; `getStatuses(code)` — GET-запрос статусов компании; `getArticleStatuses(companyCode, articleId)` — GET-запрос статусов статьи. Base URL читается из настроек (`BrowserStorage`). |
-| `CompanyProcessor` | `content_scripts/companyProcessor.js` | Оркестратор (точка входа): ждёт загрузки страницы, проверяет корректность URL, затем выбирает сценарий по типу страницы. Страница компании (`_initCompanyPage`): извлекает данные через `CompanyExtractor`, отправляет их через `CompanyApiClient.sendCompany()`, показывает результат через `MessageControl`, запрашивает статусы через `getStatuses()` и выводит их через `StatusBadges.render()`. Детальная страница статьи (`_initArticlePage`): извлекает `code` компании и `id` статьи из URL (`/ru/companies/{code}/articles/{id}/`), запрашивает статусы через `getArticleStatuses()` и выводит их через `StatusBadges.renderArticle()` возле заголовка статьи. |
-| `StatusBadges` | `content_scripts/statusBadges.js` | Отображение индикаторов статусов: `render(statuses)` — после ссылки с названием компании (`.info a.name`) бейджи `action_industry` и `action_company`; `renderArticle(statuses)` — под заголовком статьи (`h1.tm-title`) бейджи `action_dev`, `action_post`, `action_comment`, `action_industry`, `action_company`. Цвет бейджа зависит от кода статуса. |
+| `CompanyProcessor` | `content_scripts/companyProcessor.js` | Оркестратор (точка входа): ждёт загрузки страницы, проверяет корректность URL, затем выбирает сценарий по типу страницы. Страница компании (`_initCompanyPage`): извлекает данные через `CompanyExtractor`, отправляет их через `CompanyApiClient.sendCompany()`, показывает результат через `MessageControl`, запрашивает статусы через `getStatuses()` и выводит их через `StatusBadges.render()`. Детальная страница статьи (`_initArticlePage`): извлекает `code` компании и `id` статьи из URL (`/ru/companies/{code}/articles/{id}/`), запрашивает статусы через `getArticleStatuses()` и выводит их через `StatusBadges.renderArticle()` возле заголовка статьи. Детальная страница новости (`_initNewsPage`): извлекает `code` компании и `id` новости из URL (`/ru/companies/{code}/news/{id}/`), запрашивает статусы через `getNewsStatuses()` и выводит их через `StatusBadges.renderNews()` возле заголовка новости. |
+| `StatusBadges` | `content_scripts/statusBadges.js` | Отображение индикаторов статусов: `render(statuses)` — после ссылки с названием компании (`.info a.name`) бейджи `action_industry` и `action_company`; `renderArticle(statuses)` / `renderNews(statuses)` — под заголовком статьи или новости (`h1.tm-title`) бейджи `action_dev`, `action_post`, `action_comment`, `action_industry`, `action_company`. Цвет бейджа зависит от кода статуса. |
 
 ### Поток данных
 
@@ -235,3 +236,28 @@ X-API-Key: {api_key}
 Порядок бейджей: `action_dev` (Разработка), `action_post` (Пост),
 `action_comment` (Комментарий), `action_industry` (Отрасль), `action_company`
 (Компания); название поля также видно в tooltip бейджа.
+
+### Получение статусов новости
+
+```
+GET {base_url}/news/statuses/{companyCode}/{newsId}
+X-API-Key: {api_key}
+```
+
+Ответ `200 OK`:
+
+```json
+{
+  "id": 1067864,
+  "company": "infostart",
+  "action_dev":      { "code": "in_progress", "title": "В работе" },
+  "action_post":     { "code": "done",        "title": "Завершено" },
+  "action_comment":  { "code": "backlog",     "title": "В бэклоге" },
+  "action_industry": { "code": "unprocessed", "title": "Не обработано" },
+  "action_company":  { "code": "rejected",    "title": "Отклонено" }
+}
+```
+
+Значения `title` выводятся в бейджах под заголовком новости (`h1.tm-title`) на
+детальной странице `https://habr.com/ru/companies/{code}/news/{id}/` — стиль и
+порядок бейджей такие же, как у статьи.

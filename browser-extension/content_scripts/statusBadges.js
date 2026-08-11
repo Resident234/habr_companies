@@ -1,8 +1,8 @@
 /**
  * StatusBadges — отображает индикаторы статусов:
  *  - компании (action_industry, action_company) рядом с названием компании;
- *  - статьи (action_dev, action_post, action_comment, action_industry,
- *    action_company) рядом с заголовком статьи.
+ *  - статьи и новости (action_dev, action_post, action_comment, action_industry,
+ *    action_company) рядом с заголовком страницы.
  */
 export class StatusBadges {
     static get CONTAINER_ID() {
@@ -106,6 +106,18 @@ export class StatusBadges {
 
         title.insertAdjacentElement('afterend', container);
         console.log('[StatusBadges.renderArticle] Badges inserted');
+    }
+
+    /**
+     * Рендерит бейджи статусов новости возле заголовка страницы (h1.tm-title).
+     * Наборы полей и формат ответа API совпадают со статьёй,
+     * поэтому рендеринг переиспользует renderArticle.
+     * @param {Object} statuses — ответ API новости:
+     *   { id, company, action_dev, action_post, action_comment, action_industry, action_company }
+     */
+    static renderNews(statuses) {
+        console.log('[StatusBadges.renderNews] Called with:', statuses);
+        StatusBadges.renderArticle(statuses);
     }
 
     static _removeExisting() {
