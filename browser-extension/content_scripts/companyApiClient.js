@@ -286,4 +286,87 @@ export class CompanyApiClient {
         const prefs = await this._storage.get();
         return (prefs && prefs.base_url) ? prefs.base_url : CONFIG.DEFAULT_BASE_URL;
     }
+
+    /**
+     * Выполняет PATCH-запрос к эндпоинту смены статуса через background-скрипт.
+     * @param {string} path — относительный путь (например, /post/statuses/...)
+     * @returns {Object|null} распарсенное тело ответа либо null при ошибке
+     */
+    async _patchStatus(path) {
+        const baseUrl = await this._getBaseUrl();
+        const url = `${baseUrl}${path}`;
+        console.log('[CompanyApiClient._patchStatus] Full request URL:', url);
+
+        try {
+            const response = await new Promise((resolve, reject) => {
+                const port = chrome.runtime.connect({ name: 'fetch' });
+                let settled = false;
+
+                port.onMessage.addListener((msg) => {
+                    settled = true;
+                    port.disconnect();
+                    resolve(msg);
+                });
+
+                port.onDisconnect.addListener(() => {
+                    if (settled) return;
+                    const error = chrome.runtime.lastError;
+                    reject(new Error(error?.message || 'Background port closed unexpectedly'));
+                });
+
+                port.postMessage({
+                    type: 'FETCH_REQUEST',
+                    url: url,
+                    method: 'PATCH',
+                    headers: {
+                        'X-API-Key': CONFIG.API_KEY,
+                        'Content-Type': 'application/json'
+                    }
+                });
+            });
+
+            console.log('[CompanyApiClient._patchStatus] Response status:', response.status);
+            console.log('[CompanyApiClient._patchStatus] Response body:', response.body);
+
+            if (response.error) throw new Error(response.error);
+
+            if (!response.ok) {
+                console.warn('[CompanyApiClient._patchStatus] Non-ok response:', response.status, response.body);
+                return { error: true, status: response.status, body: response.body };
+            }
+
+            return JSON.parse(response.body);
+        } catch (error) {
+            console.error('[CompanyApiClient._patchStatus] Fetch failed:', error);
+            return null;
+        }
+    }
+
+    /** Переключает статус бейджа компании (action_industry / action_company). */
+    async updateCompanyStatus(companyCode, field, direction) {
+        return this._patchStatus(
+            `/company/statuses/${encodeURIComponent(companyCode)}/${encodeURIComponent(field)}/${encodeURIComponent(direction)}`
+        );
+    }
+
+    /** Переключает статус бейджа статьи. */
+    async updateArticleStatus(companyCode, articleId, field, direction) {
+        return this._patchStatus(
+            `/article/statuses/${encodeURIComponent(companyCode)}/${encodeURIComponent(articleId)}/${encodeURIComponent(field)}/${encodeURIComponent(direction)}`
+        );
+    }
+
+    /** Переключает статус бейджа новости. */
+    async updateNewsStatus(companyCode, newsId, field, direction) {
+        return this._patchStatus(
+            `/news/statuses/${encodeURIComponent(companyCode)}/${encodeURIComponent(newsId)}/${encodeURIComponent(field)}/${encodeURIComponent(direction)}`
+        );
+    }
+
+    /** Переключает статус бейджа поста. */
+    async updatePostStatus(companyCode, postId, field, direction) {
+        return this._patchStatus(
+            `/post/statuses/${encodeURIComponent(companyCode)}/${encodeURIComponent(postId)}/${encodeURIComponent(field)}/${encodeURIComponent(direction)}`
+        );
+    }
 }

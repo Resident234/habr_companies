@@ -103,6 +103,39 @@
     border: 1px solid transparent !important;
 }
 
+/* Кнопки «Назад»/«Вперёд» внутри бейджа */
+.habr-status-badge__nav {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 16px !important;
+    height: 16px !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    color: inherit !important;
+    font-size: 10px !important;
+    line-height: 1 !important;
+    cursor: pointer !important;
+    opacity: 0.4 !important;
+    border-radius: 3px !important;
+    flex-shrink: 0 !important;
+    transition: opacity 0.15s ease !important;
+}
+
+.habr-status-badge__nav:hover:not(:disabled) {
+    opacity: 1 !important;
+}
+
+.habr-status-badge__nav:disabled {
+    opacity: 0.15 !important;
+    cursor: wait !important;
+}
+
+.habr-status-badge__nav::before {
+    content: '' !important;
+}
+
 .habr-status-badge__dot {
     width: 7px !important;
     height: 7px !important;

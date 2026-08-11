@@ -18,6 +18,7 @@ CREATE TABLE companies (
     title VARCHAR(255) NOT NULL,
     last_processed_article_id BIGINT UNSIGNED NULL DEFAULT NULL,
     last_processed_news_id BIGINT UNSIGNED NULL DEFAULT NULL,
+    last_processed_post_id BIGINT UNSIGNED NULL DEFAULT NULL,
     link VARCHAR(512) NULL DEFAULT NULL,
     action_industry VARCHAR(255) NOT NULL DEFAULT 'unprocessed' COLLATE utf8mb4_0900_ai_ci,
     action_company  VARCHAR(255) NOT NULL DEFAULT 'unprocessed' COLLATE utf8mb4_0900_ai_ci,

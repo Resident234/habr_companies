@@ -211,6 +211,90 @@ describe('content_script/statusBadges', function () {
         });
     });
 
+    describe('nav buttons', function () {
+        const addArticleTitle = () => {
+            const h1 = document.createElement('h1');
+            h1.className = 'tm-title tm-title_h1';
+            const span = document.createElement('span');
+            span.textContent = 'Тестовая статья';
+            h1.appendChild(span);
+            document.body.appendChild(h1);
+            return h1;
+        };
+
+        const buildStatuses = () => ({
+            id: 1067190,
+            company: 'wirenboard',
+            action_dev: { code: 'backlog', title: 'В бэклоге' },
+            action_post: { code: 'done', title: 'Завершено' },
+            action_comment: { code: 'in_progress', title: 'В работе' },
+            action_industry: { code: 'unprocessed', title: 'Не обработано' },
+            action_company: { code: 'rejected', title: 'Отклонено' },
+        });
+
+        it('should render back/fwd nav buttons on every badge', () => {
+            addArticleTitle();
+            StatusBadges.renderArticle(buildStatuses());
+
+            const badges = document.querySelectorAll('.habr-status-badge');
+            assert.strictEqual(badges.length, 5);
+
+            for (const badge of badges) {
+                const back = badge.querySelector('.habr-status-badge__nav--back');
+                const fwd = badge.querySelector('.habr-status-badge__nav--fwd');
+                assert(back, 'back button must exist');
+                assert(fwd, 'fwd button must exist');
+                assert.strictEqual(back.textContent, '◀');
+                assert.strictEqual(fwd.textContent, '▶');
+            }
+        });
+
+        it('should set data attributes for entity, field, company, id', () => {
+            addArticleTitle();
+            StatusBadges.renderArticle(buildStatuses());
+
+            const badge = document.querySelectorAll('.habr-status-badge')[0];
+            assert.strictEqual(badge.dataset.entity, 'article');
+            assert.strictEqual(badge.dataset.company, 'wirenboard');
+            assert.strictEqual(badge.dataset.id, '1067190');
+            assert.strictEqual(badge.dataset.field, 'action_dev');
+        });
+
+        it('should render badges with first/last status and disable appropriate buttons visually', () => {
+            const statuses = {
+                id: 1,
+                company: 'test',
+                action_dev: { code: 'unprocessed', title: 'Не обработано' },
+                action_company: { code: 'rejected', title: 'Отклонено' },
+            };
+            addArticleTitle();
+            StatusBadges.renderArticle(statuses);
+
+            const badges = document.querySelectorAll('.habr-status-badge');
+            assert.strictEqual(badges.length, 2);
+            // unprocessed (first) — back button should exist but can be clicked (server decides)
+            assert(badges[0].querySelector('.habr-status-badge__nav--back'));
+            assert(badges[0].querySelector('.habr-status-badge__nav--fwd'));
+            // rejected (last) — fwd button exists
+            assert(badges[1].querySelector('.habr-status-badge__nav--back'));
+            assert(badges[1].querySelector('.habr-status-badge__nav--fwd'));
+        });
+
+        it('should update badge class and text when _applyStatus is called', () => {
+            addArticleTitle();
+            StatusBadges.renderArticle(buildStatuses());
+
+            const badge = document.querySelectorAll('.habr-status-badge')[0];
+            assert(badge.classList.contains('habr-status-badge--backlog'));
+
+            StatusBadges._applyStatus(badge, { code: 'in_progress', title: 'В работе' });
+
+            assert(badge.classList.contains('habr-status-badge--in_progress'));
+            assert(!badge.classList.contains('habr-status-badge--backlog'));
+            assert.strictEqual(badge.querySelector('.habr-status-badge__text').textContent, 'В работе');
+        });
+    });
+
     describe('#renderPost', function () {
         const addPostPageTitle = () => {
             const body = document.createElement('div');

@@ -14,6 +14,7 @@
 - **Индикаторы статусов новости** — на детальной странице новости (`https://habr.com/ru/companies/{code}/news/{id}/`) запрашиваются статусы (`GET {base_url}/news/statuses/{code}/{id}`) и под заголовком новости (`h1.tm-title`) выводятся те же цветные бейджи с пятью action-полями
 - **Индикаторы статусов в списке постов** — на странице списка постов компании (`https://habr.com/ru/companies/{code}/posts/`, включая страницы пагинации `.../posts/page{N}/`) id постов собираются из атрибутов `id` тегов `article` внутри `.tm-articles-list`, статусы запрашиваются одним пакетным запросом (`GET {base_url}/posts/statuses/{code}?ids=...`, до 100 id за раз) и бейджи с пятью action-полями выводятся после заголовка каждого поста в списке (`StatusBadges.renderPostInList`)
 - **Индикаторы статусов на детальной странице поста** — на странице поста (`https://habr.com/ru/companies/{code}/posts/{id}/`) статусы запрашиваются тем же пакетным эндпоинтом (`GET {base_url}/posts/statuses/{code}?ids={id}`) и бейджи с пятью action-полями выводятся инлайн рядом с заголовком внутри `.article-formatted-body` (после `<strong>` первого параграфа; если он не найден — после `h1.tm-title`) через `StatusBadges.renderPost`
+- **Смена статусов прямо со страницы** — рядом с каждым бейджем (на всех типах страниц) выводятся кнопки «◀ Назад» и «Вперёд ▶». При нажатии расширение вызывает PATCH-эндпоинт `PATCH {base_url}/{entity}/statuses/.../{field}/{direction}`, который сдвигает статус на один шаг по фиксированному порядку `unprocessed → backlog → in_progress → done → rejected`; после успешного ответа цвет и текст бейджа обновляются без перезагрузки страницы. При ответе `409 Conflict` (статус изменился параллельно) расширение перезапрашивает актуальные статусы и обновляет бейдж
 - **Настройка адреса сервиса** — URL сервиса можно изменить на странице настроек расширения
 - **Автоматический запуск** — запрос отправляется после полной загрузки страницы
 
@@ -24,9 +25,9 @@
 | Класс | Файл | Ответственность |
 |---|---|---|
 | `CompanyExtractor` | `content_scripts/companyExtractor.js` | Извлечение данных из URL и DOM: извлечение кода компании из URL (`extractCode`), извлечение названия компании из DOM (`extractTitle`). Все методы статические — не зависит от браузерного storage и не выполняет сетевых запросов. |
-| `CompanyApiClient` | `content_scripts/companyApiClient.js` | Работа с REST API: `sendCompany(code, title)` — POST-запрос добавления компании; `getStatuses(code)` — GET-запрос статусов компании; `getArticleStatuses(companyCode, articleId)` — GET-запрос статусов статьи; `getNewsStatuses(companyCode, newsId)` — GET-запрос статусов новости; `getPostsStatuses(companyCode, postIds)` — пакетный GET-запрос статусов постов (`?ids=...`). Base URL читается из настроек (`BrowserStorage`). |
+| `CompanyApiClient` | `content_scripts/companyApiClient.js` | Работа с REST API: `sendCompany(code, title)` — POST-запрос добавления компании; `getStatuses(code)` — GET-запрос статусов компании; `getArticleStatuses(companyCode, articleId)` — GET-запрос статусов статьи; `getNewsStatuses(companyCode, newsId)` — GET-запрос статусов новости; `getPostsStatuses(companyCode, postIds)` — пакетный GET-запрос статусов постов (`?ids=...`); `updateCompanyStatus(code, field, direction)` / `updateArticleStatus(code, id, field, direction)` / `updateNewsStatus(code, id, field, direction)` / `updatePostStatus(code, id, field, direction)` — PATCH-запросы смены статуса на шаг вперёд (`fwd`) или назад (`back`). Base URL читается из настроек (`BrowserStorage`). |
 | `CompanyProcessor` | `content_scripts/companyProcessor.js` | Оркестратор (точка входа): ждёт загрузки страницы, проверяет корректность URL, затем выбирает сценарий по типу страницы. Страница компании (`_initCompanyPage`): извлекает данные через `CompanyExtractor`, отправляет их через `CompanyApiClient.sendCompany()`, показывает результат через `MessageControl`, запрашивает статусы через `getStatuses()` и выводит их через `StatusBadges.render()`. Детальная страница статьи (`_initArticlePage`): извлекает `code` компании и `id` статьи из URL (`/ru/companies/{code}/articles/{id}/`), запрашивает статусы через `getArticleStatuses()` и выводит их через `StatusBadges.renderArticle()` возле заголовка статьи. Детальная страница новости (`_initNewsPage`): извлекает `code` компании и `id` новости из URL (`/ru/companies/{code}/news/{id}/`), запрашивает статусы через `getNewsStatuses()` и выводит их через `StatusBadges.renderNews()` возле заголовка новости. Страница списка постов (`_initPostsListPage`): извлекает `code` компании из URL (`/ru/companies/{code}/posts/` или `.../posts/page{N}/`), собирает id постов из DOM (`.tm-articles-list article[id]`), запрашивает статусы одним вызовом `getPostsStatuses()` и выводит бейджи рядом с заголовком каждого найденного поста через `StatusBadges.renderPostInList()`. Детальная страница поста (`_initPostPage`): извлекает `code` компании и `id` поста из URL (`/ru/companies/{code}/posts/{id}/`), запрашивает статусы через `getPostsStatuses(code, [id])` и выводит их инлайн рядом с заголовком поста через `StatusBadges.renderPost()`. |
-| `StatusBadges` | `content_scripts/statusBadges.js` | Отображение индикаторов статусов: `render(statuses)` — после ссылки с названием компании (`.info a.name`) бейджи `action_industry` и `action_company`; `renderArticle(statuses)` / `renderNews(statuses)` — под заголовком статьи или новости (`h1.tm-title`) бейджи `action_dev`, `action_post`, `action_comment`, `action_industry`, `action_company`; `renderPostInList(articleElement, statuses)` — те же пять бейджей после заголовка поста в списке постов; `renderPost(statuses)` — те же пять бейджей инлайн после заголовка на детальной странице поста (`.article-formatted-body p strong`, fallback — `h1.tm-title`). Цвет бейджа зависит от кода статуса. |
+| `StatusBadges` | `content_scripts/statusBadges.js` | Отображение и редактирование индикаторов статусов: `render(statuses)` — после ссылки с названием компании (`.info a.name`) бейджи `action_industry` и `action_company`; `renderArticle(statuses)` / `renderNews(statuses)` — под заголовком статьи или новости (`h1.tm-title`) бейджи `action_dev`, `action_post`, `action_comment`, `action_industry`, `action_company`; `renderPostInList(articleElement, statuses)` — те же пять бейджей после заголовка поста в списке постов; `renderPost(statuses)` — те же пять бейджей инлайн после заголовка на детальной странице поста (`.article-formatted-body p strong`, fallback — `h1.tm-title`). Цвет бейджа зависит от кода статуса. Каждый бейдж содержит кнопки «◀»/«▶» и data-атрибуты (`entity`, `field`, `company`, `id`); по клику вызывается PATCH-эндпоинт смены статуса (см. `CompanyApiClient.updateXStatus`), после успеха бейдж обновляется (`_applyStatus`), при конфликте `409` статус перезапрашивается (`_refreshStatuses`). |
 
 ### Поток данных
 
@@ -316,3 +317,52 @@ X-API-Key: {api_key}
 Значения `title` выводятся в бейджах после заголовка каждого поста в списке
 (`StatusBadges.renderPostInList`). Посты, не найденные в базе, просто не получают
 бейджей.
+
+### Смена статуса (шаг вперёд / назад)
+
+Вызывается при нажатии кнопок «◀ Назад» / «Вперёд ▶» рядом с бейджем статуса.
+Сдвигает статус на один шаг по фиксированному порядку:
+
+```
+unprocessed → backlog → in_progress → done → rejected
+ (Не обработано) (В бэклоге)   (В работе)   (Завершено) (Отклонено)
+```
+
+```
+PATCH {base_url}/{entity}/statuses/.../{field}/{direction}
+X-API-Key: {api_key}
+```
+
+| Сущность | Запрос |
+|---|---|
+| Компания | `PATCH /company/statuses/{code}/{field}/{direction}` |
+| Статья | `PATCH /article/statuses/{companyCode}/{articleId}/{field}/{direction}` |
+| Новость | `PATCH /news/statuses/{companyCode}/{newsId}/{field}/{direction}` |
+| Пост | `PATCH /post/statuses/{companyCode}/{postId}/{field}/{direction}` |
+
+- `field` — имя action-поля: `action_dev`, `action_post`, `action_comment`,
+  `action_industry`, `action_company`. Для компании допустимы только
+  `action_industry` и `action_company`;
+- `direction` — `fwd` (следующий статус) или `back` (предыдущий).
+
+**Ответы:** `200 OK` — статус сменился (тело содержит прежнее `from` и новое `to`
+значения); `400` — невалидные параметры; `401` — неверный API-ключ; `404` —
+запись не найдена; `409` — статус изменился параллельно или шаг невозможен
+(уже первый/последний статус); `500` — ошибка сервера.
+
+Ответ `200 OK` (для статьи; у компании вместо `id`/`company` возвращается `code`):
+
+```json
+{
+  "id": 1067190,
+  "company": "wirenboard",
+  "field": "action_post",
+  "from": { "code": "in_progress", "title": "В работе" },
+  "to":   { "code": "done",        "title": "Завершено" }
+}
+```
+
+После `200 OK` расширение обновляет бейдж без перезагрузки страницы
+(`StatusBadges._applyStatus`): применяется новый цвет и текст из `to`.
+По `409 Conflict` выполняется повторный GET-запрос актуальных статусов
+(`StatusBadges._refreshStatuses`) и бейдж синхронизируется с базой.
