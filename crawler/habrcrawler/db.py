@@ -90,6 +90,23 @@ async def get_companies_news_progress():
     return companies
 
 
+async def get_companies_posts_progress():
+    '''
+    Returns a list of (company_code, last_processed_post_id) tuples
+    from the companies table. last_processed_post_id is None for
+    companies whose posts have not been crawled yet.
+    '''
+    pool = await init_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                'SELECT code, last_processed_post_id FROM companies')
+            rows = await cur.fetchall()
+    companies = [(r[0], r[1]) for r in rows]
+    LOGGER.info('loaded %d companies from database', len(companies))
+    return companies
+
+
 async def update_company_progress(code, article_id):
     '''
     Record the article_id last processed for a company. Uses GREATEST so a
@@ -312,6 +329,22 @@ async def update_company_news_progress(code, news_id):
                 '    GREATEST(COALESCE(last_processed_news_id, 0), %s) '
                 'WHERE code = %s',
                 (news_id, code))
+
+
+async def update_company_posts_progress(code, post_id):
+    '''
+    Record the post_id last processed for a company. Uses GREATEST so a
+    concurrently processed lower post_id can never roll the progress back.
+    '''
+    pool = await init_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                'UPDATE companies '
+                'SET last_processed_post_id = '
+                '    GREATEST(COALESCE(last_processed_post_id, 0), %s) '
+                'WHERE code = %s',
+                (post_id, code))
 
 
 async def update_company_link(code, link):

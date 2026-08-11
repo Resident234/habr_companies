@@ -144,6 +144,10 @@ Habr:
   NewsUrlTemplate: 'https://habr.com/ru/companies/{company}/news/{news_id}/'
   NewsIdStart: 1
   NewsIdEnd: 10000000
+  PostPagesMode: False  # if True, crawl company posts by id range
+  PostUrlTemplate: 'https://habr.com/ru/companies/{company}/posts/{post_id}/'
+  PostIdStart: 1
+  PostIdEnd: 10000000
   SeedBatchSize: 20000  # how many urls to keep queued per company batch
 
 '''

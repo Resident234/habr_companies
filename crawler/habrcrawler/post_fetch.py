@@ -24,6 +24,7 @@ from . import geoip
 from . import content
 from . import habr_parse
 from . import habr_news_parse
+from . import habr_post_parse
 from . import company_categories
 from . import company_posts
 
@@ -269,6 +270,15 @@ async def post_2xx(f, url, ridealong, priority, host_geoip, json_log, crawler):
                 except Exception as e:
                     stats.stats_sum('habr news save errors', 1)
                     LOGGER.warning('failed to save news %s: %s', url.url, e)
+            elif ridealong.get('post_id') is not None:
+                # Company post page: extract post data
+                try:
+                    saved = await habr_post_parse.parse_and_save_post(
+                        body, url.url, company_code)
+                    json_log['habr_post_saved'] = bool(saved)
+                except Exception as e:
+                    stats.stats_sum('habr post save errors', 1)
+                    LOGGER.warning('failed to save post %s: %s', url.url, e)
             else:
                 # Article page: extract article data
                 try:

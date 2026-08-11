@@ -302,6 +302,82 @@ https://habr.com/ru/companies/{company}/news/{news_id}/
    миграция для существующих баз; для новых баз колонка уже включена в
    `../sql/create_companies_table.sql`)
 
+### Перебор постов компаний по id
+
+Для сбора отдельных постов компаний (страницы вида
+`https://habr.com/ru/companies/{code}/posts/{id}/`) установите в
+`.habrcrawler-config.yml`:
+
+```yaml
+Habr:
+  Enabled: True
+  PostPagesMode: True
+```
+
+Режим работает так же, как воркер статей/новостей: для каждой компании
+из таблицы `companies` перебирается диапазон id от `PostIdStart` до
+`PostIdEnd` (1..10 000 000 по умолчанию) по шаблону
+
+```
+https://habr.com/ru/companies/{company}/posts/{post_id}/
+```
+
+Например: `https://habr.com/ru/companies/ruvds/posts/1064400/`
+
+Страница поста — это не полноценная статья: нет `h1.tm-title`,
+`.tm-publication-hubs` и `tm-votes-meter__value_rating`. Поэтому
+заголовок, хабы и счётчик рейтинга извлекаются из встроенного
+preloaded-state JSON (запись с `publicationType == "post"`), а счётчики
+просмотров/закладок/комментариев — из уже знакомой иконочной вёрстки.
+Найденные посты сохраняются в таблицу `posts` (поля аналогичны
+`articles`, за исключением отсутствия label), хабы привязываются через
+`post_hubs`.
+
+Прогресс сохраняется в отдельную колонку
+`companies.last_processed_post_id` (тем же способом, что
+`last_processed_article_id` для статей и `last_processed_news_id` для
+новостей), поэтому перезапуск продолжает перебор с
+`last_processed_post_id + 1`. Повторный запуск безопасен: посты с уже
+существующим `id` пропускаются.
+
+**Что было сделано для этого режима:**
+
+1. **`habrcrawler/habr_posts.py`** — новый модуль:
+   - `HabrPostPagesSeedGenerator` — ленивая батчевая генерация URL
+     постов по компаниям из БД с round-robin чередованием (копия
+     механики `HabrNewsSeedGenerator`, но по диапазону `post_id`,
+     `PostUrlTemplate`, `PostIdStart`, `PostIdEnd`)
+
+2. **`habrcrawler/habr_post_parse.py`** — новый модуль:
+   - `POST_URL_RE` — шаблон `/ru/companies/{company}/posts/{post_id}/`
+   - `parse_post_html()` — извлекает поля из preloaded-state JSON
+     (title, hubs, score) и иконочной вёрстки (views, bookmarks,
+     comments)
+   - `parse_and_save_post()` — сохраняет пост в `posts` и привязывает
+     хабы
+
+3. **`habrcrawler/db.py`** — добавлены функции:
+   - `get_companies_posts_progress()` — список компаний с прогрессом
+     `last_processed_post_id`
+   - `update_company_posts_progress(code, post_id)` — обновление
+     прогресса через `GREATEST(...)`
+
+4. **`habrcrawler/__init__.py`** — поддержка режима `PostPagesMode`:
+   при `Habr.Enabled=True` и `Habr.PostPagesMode=True` используется
+   генератор постов; прогресс `last_processed_post_id` обновляется
+   после финального исхода обработки каждого URL с `post_id`
+
+5. **`habrcrawler/post_fetch.py`** — обработка страниц постов: при
+   `post_id` в ridealong вызывается парсер постов вместо парсера
+   статей/новостей
+
+6. **Конфигурация** — добавлены `PostPagesMode`, `PostUrlTemplate`,
+   `PostIdStart`, `PostIdEnd` в `config.py` и `.habrcrawler-config.yml`
+
+7. **SQL** — `../sql/add_last_processed_post_id_to_companies.sql`
+   (идемпотентная миграция для существующих баз; для новых баз колонка
+   уже включена в `../sql/create_companies_table.sql`)
+
 ## Сохранение прогресса
 
 Краулер ведёт прогресс по каждой компании отдельно: в таблице

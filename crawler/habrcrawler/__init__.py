@@ -44,6 +44,7 @@ from . import memory
 from . import db
 from . import habr_seeds
 from . import habr_news
+from . import habr_posts
 from . import company_categories
 from . import company_posts
 
@@ -147,6 +148,7 @@ class Crawler:
         self.habr_profile_mode = bool(config.read('Habr', 'ProfileMode'))
         self.habr_posts_mode = bool(config.read('Habr', 'PostsMode'))
         self.habr_news_mode = bool(config.read('Habr', 'NewsMode'))
+        self.habr_post_pages_mode = bool(config.read('Habr', 'PostPagesMode'))
         self.habr_generator = None
 
         if load is not None:
@@ -176,6 +178,12 @@ class Crawler:
                 self._seeds = []
                 self.habr_generator = self.loop.run_until_complete(
                     habr_news.seed_from_database(self))
+            elif self.habr_mode and self.habr_post_pages_mode:
+                # Habr post pages mode: seeds come from the companies
+                # table in MySQL, generated lazily in batches by post id
+                self._seeds = []
+                self.habr_generator = self.loop.run_until_complete(
+                    habr_posts.seed_from_database(self))
             elif self.habr_mode:
                 # Habr mode: seeds come from the companies table in MySQL,
                 # generated lazily in batches
@@ -477,6 +485,16 @@ class Crawler:
                              'news %s: %s',
                              ridealong['company_code'],
                              ridealong['news_id'], e)
+
+        if self.habr_mode and 'company_code' in ridealong and 'post_id' in ridealong:
+            try:
+                await db.update_company_posts_progress(
+                    ridealong['company_code'], ridealong['post_id'])
+            except Exception as e:
+                LOGGER.error('failed to save posts progress for company %s '
+                             'post %s: %s',
+                             ridealong['company_code'],
+                             ridealong['post_id'], e)
 
         if self.crawllogfd:
             print(json.dumps(json_log, sort_keys=True), file=self.crawllogfd)
