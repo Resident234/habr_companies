@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -265,4 +266,104 @@ func GetNewsStatuses(companyCode string, newsID int64) (statuses *NewsStatuses, 
 		ActionIndustry: &CompanyStatus{Code: industryCode, Title: industryTitle},
 		ActionCompany:  &CompanyStatus{Code: companyStatusCode, Title: companyTitle},
 	}, true, nil
+}
+
+// PostStatuses — статусы поста по полям action_dev, action_post, action_comment,
+// action_industry и action_company. Структура совпадает с NewsStatuses.
+type PostStatuses = NewsStatuses
+
+// PostsStatuses — результат пакетного запроса статусов постов компании.
+// Включает только те посты, что найдены в таблице posts.
+type PostsStatuses struct {
+	Company string          `json:"company"`
+	Posts   []*PostStatuses `json:"posts"`
+}
+
+// maxBatchIDs — максимальное число id в одном пакетном запросе
+// (защита от слишком длинных IN-списков).
+const maxBatchIDs = 100
+
+// GetPostsStatuses возвращает статусы постов (таблица posts) по коду компании
+// и списку id, с человекочитаемыми title из связанной таблицы statuses.
+// Посты, отсутствующие в таблице, просто не включаются в ответ.
+func GetPostsStatuses(companyCode string, ids []int64) (statuses *PostsStatuses, err error) {
+	if db == nil {
+		return nil, fmt.Errorf("database not initialized")
+	}
+
+	result := &PostsStatuses{Company: companyCode, Posts: []*PostStatuses{}}
+	if len(ids) == 0 {
+		return result, nil
+	}
+	if len(ids) > maxBatchIDs {
+		return nil, fmt.Errorf("too many ids: %d (max %d)", len(ids), maxBatchIDs)
+	}
+
+	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
+	args := make([]interface{}, 0, len(ids)+1)
+	args = append(args, companyCode)
+	for _, id := range ids {
+		args = append(args, id)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	rows, err := db.QueryContext(ctx, `
+		SELECT p.id, p.company,
+		       sd.code, sd.title,
+		       sp.code, sp.title,
+		       sm.code, sm.title,
+		       si.code, si.title,
+		       sc.code, sc.title
+		FROM posts p
+		LEFT JOIN statuses sd ON sd.code = p.action_dev
+		LEFT JOIN statuses sp ON sp.code = p.action_post
+		LEFT JOIN statuses sm ON sm.code = p.action_comment
+		LEFT JOIN statuses si ON si.code = p.action_industry
+		LEFT JOIN statuses sc ON sc.code = p.action_company
+		WHERE p.company = ? AND p.id IN (`+placeholders+`)`, args...,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			postID                      int64
+			company                     string
+			devCode, devTitle           string
+			postCode, postTitle         string
+			commentCode, commentTitle   string
+			industryCode, industryTitle string
+			companyStatusCode           string
+			compTitle                   string
+		)
+		if err := rows.Scan(
+			&postID, &company,
+			&devCode, &devTitle,
+			&postCode, &postTitle,
+			&commentCode, &commentTitle,
+			&industryCode, &industryTitle,
+			&companyStatusCode, &compTitle,
+		); err != nil {
+			return nil, err
+		}
+
+		result.Posts = append(result.Posts, &PostStatuses{
+			ID:             postID,
+			Company:        company,
+			ActionDev:      &CompanyStatus{Code: devCode, Title: devTitle},
+			ActionPost:     &CompanyStatus{Code: postCode, Title: postTitle},
+			ActionComment:  &CompanyStatus{Code: commentCode, Title: commentTitle},
+			ActionIndustry: &CompanyStatus{Code: industryCode, Title: industryTitle},
+			ActionCompany:  &CompanyStatus{Code: companyStatusCode, Title: compTitle},
+		})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }

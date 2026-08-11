@@ -512,3 +512,167 @@ func TestHTTP_NewsStatuses_DBError(t *testing.T) {
 		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
 	}
 }
+
+// === /posts/statuses/{companyCode}?ids=... ===
+
+func withPostsStatuses(t *testing.T, fn func(code string, ids []int64) (*dbop.PostsStatuses, error)) {
+	t.Helper()
+	old := getPostsStatuses
+	getPostsStatuses = fn
+	t.Cleanup(func() { getPostsStatuses = old })
+}
+
+func doGetPostsStatuses(t *testing.T, code, query, apiKey string) *httptest.ResponseRecorder {
+	t.Helper()
+	path := fmt.Sprintf("/posts/statuses/%s%s", url.PathEscape(code), query)
+	req := httptest.NewRequest(http.MethodGet, path, nil)
+	if apiKey != "" {
+		req.Header.Set("X-API-Key", apiKey)
+	}
+	rec := httptest.NewRecorder()
+	NewRouter().ServeHTTP(rec, req)
+	return rec
+}
+
+func newTestPostsStatuses() *dbop.PostsStatuses {
+	return &dbop.PostsStatuses{
+		Company: "k2tech",
+		Posts: []*dbop.PostStatuses{
+			{
+				ID:             1044134,
+				Company:        "k2tech",
+				ActionDev:      &dbop.CompanyStatus{Code: "in_progress", Title: "В работе"},
+				ActionPost:     &dbop.CompanyStatus{Code: "done", Title: "Завершено"},
+				ActionComment:  &dbop.CompanyStatus{Code: "backlog", Title: "В бэклоге"},
+				ActionIndustry: &dbop.CompanyStatus{Code: "unprocessed", Title: "Не обработано"},
+				ActionCompany:  &dbop.CompanyStatus{Code: "rejected", Title: "Отклонено"},
+			},
+			{
+				ID:             1044135,
+				Company:        "k2tech",
+				ActionDev:      &dbop.CompanyStatus{Code: "unprocessed", Title: "Не обработано"},
+				ActionPost:     &dbop.CompanyStatus{Code: "unprocessed", Title: "Не обработано"},
+				ActionComment:  &dbop.CompanyStatus{Code: "unprocessed", Title: "Не обработано"},
+				ActionIndustry: &dbop.CompanyStatus{Code: "unprocessed", Title: "Не обработано"},
+				ActionCompany:  &dbop.CompanyStatus{Code: "unprocessed", Title: "Не обработано"},
+			},
+		},
+	}
+}
+
+func TestHTTP_PostsStatuses_OK(t *testing.T) {
+	withAPIKey(t)
+	withPostsStatuses(t, func(code string, ids []int64) (*dbop.PostsStatuses, error) {
+		if code != "k2tech" {
+			t.Errorf("unexpected code=%q", code)
+		}
+		if len(ids) != 2 || ids[0] != 1044134 || ids[1] != 1044135 {
+			t.Errorf("unexpected ids=%v", ids)
+		}
+		return newTestPostsStatuses(), nil
+	})
+
+	rec := doGetPostsStatuses(t, "k2tech", "?ids=1044134,1044135", "test-key")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+
+	var body dbop.PostsStatuses
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Company != "k2tech" {
+		t.Fatalf("company=%q", body.Company)
+	}
+	if len(body.Posts) != 2 {
+		t.Fatalf("posts count=%d", len(body.Posts))
+	}
+	if body.Posts[0].ID != 1044134 {
+		t.Fatalf("first post id=%d", body.Posts[0].ID)
+	}
+	if body.Posts[0].ActionDev == nil || body.Posts[0].ActionDev.Title != "В работе" {
+		t.Fatalf("action_dev=%+v", body.Posts[0].ActionDev)
+	}
+	if body.Posts[0].ActionCompany == nil || body.Posts[0].ActionCompany.Code != "rejected" {
+		t.Fatalf("action_company=%+v", body.Posts[0].ActionCompany)
+	}
+}
+
+func TestHTTP_PostsStatuses_DuplicateIDsAreDeduplicated(t *testing.T) {
+	withAPIKey(t)
+	withPostsStatuses(t, func(code string, ids []int64) (*dbop.PostsStatuses, error) {
+		if len(ids) != 2 {
+			t.Errorf("expected 2 unique ids, got %v", ids)
+		}
+		return newTestPostsStatuses(), nil
+	})
+
+	rec := doGetPostsStatuses(t, "k2tech", "?ids=1044134,1044134,1044135,", "test-key")
+	if rec.Code != http.StatusBadRequest && rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHTTP_PostsStatuses_ValidationErrors(t *testing.T) {
+	withAPIKey(t)
+	withPostsStatuses(t, func(code string, ids []int64) (*dbop.PostsStatuses, error) {
+		t.Fatal("getPostsStatuses must not be called")
+		return nil, nil
+	})
+
+	cases := []struct{ code, query, key string }{
+		{"bad code", "?ids=1044134", "test-key"},
+		{"k2tech", "", "test-key"},
+		{"k2tech", "?ids=abc", "test-key"},
+		{"k2tech", "?ids=1044134,0", "test-key"},
+		{"k2tech", "?ids=-5", "test-key"},
+	}
+	for _, c := range cases {
+		rec := doGetPostsStatuses(t, c.code, c.query, c.key)
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("code=%q query=%q status=%d body=%s", c.code, c.query, rec.Code, rec.Body.String())
+		}
+	}
+}
+
+func TestHTTP_PostsStatuses_TooManyIDs(t *testing.T) {
+	withAPIKey(t)
+	withPostsStatuses(t, func(code string, ids []int64) (*dbop.PostsStatuses, error) {
+		t.Fatal("getPostsStatuses must not be called")
+		return nil, nil
+	})
+
+	parts := make([]string, 0, 101)
+	for i := 1; i <= 101; i++ {
+		parts = append(parts, fmt.Sprintf("%d", i))
+	}
+	rec := doGetPostsStatuses(t, "k2tech", "?ids="+strings.Join(parts, ","), "test-key")
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHTTP_PostsStatuses_WrongKey(t *testing.T) {
+	withAPIKey(t)
+	withPostsStatuses(t, func(code string, ids []int64) (*dbop.PostsStatuses, error) {
+		t.Fatal("getPostsStatuses must not be called")
+		return nil, nil
+	})
+
+	rec := doGetPostsStatuses(t, "k2tech", "?ids=1044134", "wrong-key")
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHTTP_PostsStatuses_DBError(t *testing.T) {
+	withAPIKey(t)
+	withPostsStatuses(t, func(code string, ids []int64) (*dbop.PostsStatuses, error) {
+		return nil, fmt.Errorf("boom")
+	})
+
+	rec := doGetPostsStatuses(t, "k2tech", "?ids=1044134", "test-key")
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}

@@ -29,6 +29,12 @@ var getArticleStatuses = dbop.GetArticleStatuses
 // getNewsStatuses вызывается из обработчика; подменяется в тестах.
 var getNewsStatuses = dbop.GetNewsStatuses
 
+// getPostsStatuses вызывается из обработчика; подменяется в тестах.
+var getPostsStatuses = dbop.GetPostsStatuses
+
+// maxBatchIDs должно совпадать с лимитом в dbOp.GetPostsStatuses.
+const maxBatchIDs = 100
+
 func validateCode(code string) bool {
 	return len(code) > 0 && len(code) <= 255 && codeRegex.MatchString(code)
 }
@@ -182,6 +188,65 @@ func getNewsStatusesHandler(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, statuses)
 }
 
+// getPostsStatusesHandler обрабатывает GET /posts/statuses/{companyCode}?ids=1,2,3.
+// Возвращает статусы action_dev, action_post, action_comment, action_industry
+// и action_company для каждого найденного поста с человекочитаемыми title
+// из справочника statuses. Ненайденные посты просто не включаются в ответ.
+func getPostsStatusesHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	code := vars["companyCode"]
+
+	if !validateCode(code) {
+		respondError(w, http.StatusBadRequest, "invalid company code: must be 1-255 chars, only latin letters, digits, _, -")
+		return
+	}
+
+	rawIDs := strings.TrimSpace(r.URL.Query().Get("ids"))
+	if rawIDs == "" {
+		respondError(w, http.StatusBadRequest, "missing ids: provide comma-separated post ids in query parameter 'ids'")
+		return
+	}
+
+	parts := strings.Split(rawIDs, ",")
+	if len(parts) > maxBatchIDs {
+		respondError(w, http.StatusBadRequest, "too many ids: max 100 per request")
+		return
+	}
+
+	ids := make([]int64, 0, len(parts))
+	seen := make(map[int64]struct{}, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if !idRegex.MatchString(part) {
+			respondError(w, http.StatusBadRequest, "invalid post id: must be a positive integer")
+			return
+		}
+		id, err := strconv.ParseInt(part, 10, 64)
+		if err != nil || id <= 0 {
+			respondError(w, http.StatusBadRequest, "invalid post id: must be a positive integer")
+			return
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+
+	if len(ids) == 0 {
+		respondError(w, http.StatusBadRequest, "missing ids: provide comma-separated post ids in query parameter 'ids'")
+		return
+	}
+
+	statuses, err := getPostsStatuses(code, ids)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "database error")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, statuses)
+}
+
 // NewRouter настраивает маршруты (удобно для HTTP-тестов и запуска из operate).
 func NewRouter() http.Handler {
 	r := mux.NewRouter()
@@ -189,5 +254,6 @@ func NewRouter() http.Handler {
 	r.Handle("/company/statuses/{code}", middleware.APIKeyAuth(http.HandlerFunc(getCompanyStatusesHandler))).Methods("GET")
 	r.Handle("/article/statuses/{companyCode}/{articleId}", middleware.APIKeyAuth(http.HandlerFunc(getArticleStatusesHandler))).Methods("GET")
 	r.Handle("/news/statuses/{companyCode}/{newsId}", middleware.APIKeyAuth(http.HandlerFunc(getNewsStatusesHandler))).Methods("GET")
+	r.Handle("/posts/statuses/{companyCode}", middleware.APIKeyAuth(http.HandlerFunc(getPostsStatusesHandler))).Methods("GET")
 	return r
 }
