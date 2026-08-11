@@ -142,6 +142,52 @@ curl "http://localhost:8080/article/statuses/wirenboard/1067190" \
   -H "X-API-Key: my-secret-key"
 ```
 
+### Получение статусов новости
+
+```text
+GET /news/statuses/{companyCode}/{newsId}?page=N
+X-API-Key: <секретный-ключ>
+```
+
+Возвращает статусы новости из таблицы `news` по коду компании и id новости.
+Числовой суффикс (`?page=N`) опционален и просто игнорируется — нужен для
+совместимости с URL вида `https://habr.com/ru/companies/{code}/news/{id}/`
+(Хабр добавляет номер страницы комментариев).
+
+- `companyCode` — латинские буквы, цифры, `_`, `-`, 1–255 символов;
+- `newsId` — положительное целое число.
+
+**Ответы:**
+
+- `200 OK` — статусы новости;
+- `400 Bad Request` — невалидный `companyCode` или `newsId`;
+- `401 Unauthorized` — неверный или отсутствующий API-ключ;
+- `404 Not Found` — новость не найдена;
+- `500 Internal Server Error` — ошибка сервера.
+
+**Формат ответа `200 OK`:**
+
+```json
+{
+  "id": 1067864,
+  "company": "infostart",
+  "action_dev":      { "code": "in_progress", "title": "В работе" },
+  "action_post":     { "code": "done",        "title": "Завершено" },
+  "action_comment":  { "code": "backlog",     "title": "В бэклоге" },
+  "action_industry": { "code": "unprocessed", "title": "Не обработано" },
+  "action_company":  { "code": "rejected",    "title": "Отклонено" }
+}
+```
+
+`title` каждого статуса подтягивается из связанной таблицы `statuses`.
+
+**Пример:**
+
+```bash
+curl "http://localhost:8080/news/statuses/infostart/1067864" \
+  -H "X-API-Key: my-secret-key"
+```
+
 ## Запуск на Windows
 
 ### В GoLand / IntelliJ IDEA

@@ -355,3 +355,160 @@ func TestHTTP_ArticleStatuses_DBError(t *testing.T) {
 		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
 	}
 }
+
+func withNewsStatuses(t *testing.T, fn func(code string, id int64) (interface{}, bool, error)) {
+	t.Helper()
+	old := getNewsStatuses
+	getNewsStatuses = func(code string, id int64) (*dbopTypesNewsStatuses, bool, error) {
+		res, found, err := fn(code, id)
+		if res == nil {
+			return nil, found, err
+		}
+		return res.(*dbopTypesNewsStatuses), found, err
+	}
+	t.Cleanup(func() { getNewsStatuses = old })
+}
+
+// dbopTypesNewsStatuses — алиас для типа из dbOp (используется в подмене).
+type dbopTypesNewsStatuses = dbop.NewsStatuses
+
+func doGetNewsStatuses(t *testing.T, code, id, apiKey string, query string) *httptest.ResponseRecorder {
+	t.Helper()
+	path := fmt.Sprintf("/news/statuses/%s/%s%s", url.PathEscape(code), id, query)
+	req := httptest.NewRequest(http.MethodGet, path, nil)
+	if apiKey != "" {
+		req.Header.Set("X-API-Key", apiKey)
+	}
+	rec := httptest.NewRecorder()
+	NewRouter().ServeHTTP(rec, req)
+	return rec
+}
+
+func newTestNewsStatuses() *dbop.NewsStatuses {
+	return &dbop.NewsStatuses{
+		ID:             1067864,
+		Company:        "infostart",
+		ActionDev:      &dbop.CompanyStatus{Code: "in_progress", Title: "В работе"},
+		ActionPost:     &dbop.CompanyStatus{Code: "done", Title: "Завершено"},
+		ActionComment:  &dbop.CompanyStatus{Code: "backlog", Title: "В бэклоге"},
+		ActionIndustry: &dbop.CompanyStatus{Code: "unprocessed", Title: "Не обработано"},
+		ActionCompany:  &dbop.CompanyStatus{Code: "rejected", Title: "Отклонено"},
+	}
+}
+
+func TestHTTP_NewsStatuses_OK(t *testing.T) {
+	withAPIKey(t)
+	withNewsStatuses(t, func(code string, id int64) (interface{}, bool, error) {
+		if code != "infostart" || id != 1067864 {
+			t.Errorf("unexpected args code=%q id=%d", code, id)
+		}
+		return newTestNewsStatuses(), true, nil
+	})
+
+	rec := doGetNewsStatuses(t, "infostart", "1067864", "test-key", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	var body dbop.NewsStatuses
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.ID != 1067864 || body.Company != "infostart" {
+		t.Fatalf("body=%+v", body)
+	}
+	if body.ActionDev == nil || body.ActionDev.Title != "В работе" {
+		t.Fatalf("action_dev=%+v", body.ActionDev)
+	}
+	if body.ActionCompany == nil || body.ActionCompany.Code != "rejected" {
+		t.Fatalf("action_company=%+v", body.ActionCompany)
+	}
+}
+
+// Query-строка (например ?page=2) не должна ломать маршрут.
+func TestHTTP_NewsStatuses_QueryStringIgnored(t *testing.T) {
+	withAPIKey(t)
+	withNewsStatuses(t, func(code string, id int64) (interface{}, bool, error) {
+		return newTestNewsStatuses(), true, nil
+	})
+
+	rec := doGetNewsStatuses(t, "infostart", "1067864", "test-key", "?page=2")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHTTP_NewsStatuses_NotFound(t *testing.T) {
+	withAPIKey(t)
+	withNewsStatuses(t, func(code string, id int64) (interface{}, bool, error) {
+		return nil, false, nil
+	})
+
+	rec := doGetNewsStatuses(t, "infostart", "999999", "test-key", "")
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHTTP_NewsStatuses_InvalidCode(t *testing.T) {
+	withAPIKey(t)
+	withNewsStatuses(t, func(code string, id int64) (interface{}, bool, error) {
+		t.Fatal("getNewsStatuses must not be called")
+		return nil, false, nil
+	})
+
+	rec := doGetNewsStatuses(t, "bad code", "1067864", "test-key", "")
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHTTP_NewsStatuses_InvalidID(t *testing.T) {
+	withAPIKey(t)
+	withNewsStatuses(t, func(code string, id int64) (interface{}, bool, error) {
+		t.Fatal("getNewsStatuses must not be called")
+		return nil, false, nil
+	})
+
+	rec := doGetNewsStatuses(t, "infostart", "abc", "test-key", "")
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHTTP_NewsStatuses_ZeroID(t *testing.T) {
+	withAPIKey(t)
+	withNewsStatuses(t, func(code string, id int64) (interface{}, bool, error) {
+		t.Fatal("getNewsStatuses must not be called")
+		return nil, false, nil
+	})
+
+	rec := doGetNewsStatuses(t, "infostart", "0", "test-key", "")
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHTTP_NewsStatuses_WrongKey(t *testing.T) {
+	withAPIKey(t)
+	withNewsStatuses(t, func(code string, id int64) (interface{}, bool, error) {
+		t.Fatal("getNewsStatuses must not be called")
+		return nil, false, nil
+	})
+
+	rec := doGetNewsStatuses(t, "infostart", "1067864", "wrong-key", "")
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHTTP_NewsStatuses_DBError(t *testing.T) {
+	withAPIKey(t)
+	withNewsStatuses(t, func(code string, id int64) (interface{}, bool, error) {
+		return nil, false, fmt.Errorf("boom")
+	})
+
+	rec := doGetNewsStatuses(t, "infostart", "1067864", "test-key", "")
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}

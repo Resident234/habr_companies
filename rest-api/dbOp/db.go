@@ -195,3 +195,74 @@ func GetArticleStatuses(companyCode string, articleID int64) (statuses *ArticleS
 		ActionCompany:  &CompanyStatus{Code: companyStatusCode, Title: companyTitle},
 	}, true, nil
 }
+
+// NewsStatuses — статусы новости по полям action_dev, action_post, action_comment,
+// action_industry и action_company. Структура совпадает с ArticleStatuses.
+type NewsStatuses struct {
+	ID             int64          `json:"id"`
+	Company        string         `json:"company"`
+	ActionDev      *CompanyStatus `json:"action_dev"`
+	ActionPost     *CompanyStatus `json:"action_post"`
+	ActionComment  *CompanyStatus `json:"action_comment"`
+	ActionIndustry *CompanyStatus `json:"action_industry"`
+	ActionCompany  *CompanyStatus `json:"action_company"`
+}
+
+// GetNewsStatuses возвращает статусы новости (таблица news) по коду компании
+// и id новости, с человекочитаемыми title из связанной таблицы statuses.
+// found == false, если новость с такими company и id не найдена.
+func GetNewsStatuses(companyCode string, newsID int64) (statuses *NewsStatuses, found bool, err error) {
+	if db == nil {
+		return nil, false, fmt.Errorf("database not initialized")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var (
+		devCode, devTitle           string
+		postCode, postTitle         string
+		commentCode, commentTitle   string
+		industryCode, industryTitle string
+		companyStatusCode           string
+		companyTitle                string
+	)
+	err = db.QueryRowContext(ctx, `
+		SELECT n.id, n.company,
+		       sd.code, sd.title,
+		       sp.code, sp.title,
+		       sm.code, sm.title,
+		       si.code, si.title,
+		       sc.code, sc.title
+		FROM news n
+		LEFT JOIN statuses sd ON sd.code = n.action_dev
+		LEFT JOIN statuses sp ON sp.code = n.action_post
+		LEFT JOIN statuses sm ON sm.code = n.action_comment
+		LEFT JOIN statuses si ON si.code = n.action_industry
+		LEFT JOIN statuses sc ON sc.code = n.action_company
+		WHERE n.company = ? AND n.id = ?`, companyCode, newsID,
+	).Scan(
+		&newsID, &companyCode,
+		&devCode, &devTitle,
+		&postCode, &postTitle,
+		&commentCode, &commentTitle,
+		&industryCode, &industryTitle,
+		&companyStatusCode, &companyTitle,
+	)
+	if err == sql.ErrNoRows {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+
+	return &NewsStatuses{
+		ID:             newsID,
+		Company:        companyCode,
+		ActionDev:      &CompanyStatus{Code: devCode, Title: devTitle},
+		ActionPost:     &CompanyStatus{Code: postCode, Title: postTitle},
+		ActionComment:  &CompanyStatus{Code: commentCode, Title: commentTitle},
+		ActionIndustry: &CompanyStatus{Code: industryCode, Title: industryTitle},
+		ActionCompany:  &CompanyStatus{Code: companyStatusCode, Title: companyTitle},
+	}, true, nil
+}

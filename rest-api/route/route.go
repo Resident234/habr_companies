@@ -26,6 +26,9 @@ var getCompanyStatuses = dbop.GetCompanyStatuses
 // getArticleStatuses вызывается из обработчика; подменяется в тестах.
 var getArticleStatuses = dbop.GetArticleStatuses
 
+// getNewsStatuses вызывается из обработчика; подменяется в тестах.
+var getNewsStatuses = dbop.GetNewsStatuses
+
 func validateCode(code string) bool {
 	return len(code) > 0 && len(code) <= 255 && codeRegex.MatchString(code)
 }
@@ -143,11 +146,48 @@ func getArticleStatusesHandler(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, statuses)
 }
 
+// getNewsStatusesHandler обрабатывает GET /news/statuses/{companyCode}/{newsId}.
+// Возвращает статусы action_dev, action_post, action_comment, action_industry
+// и action_company новости с человекочитаемыми title из справочника statuses.
+func getNewsStatusesHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	code := vars["companyCode"]
+	idStr := vars["newsId"]
+
+	if !validateCode(code) {
+		respondError(w, http.StatusBadRequest, "invalid company code: must be 1-255 chars, only latin letters, digits, _, -")
+		return
+	}
+
+	if !idRegex.MatchString(idStr) {
+		respondError(w, http.StatusBadRequest, "invalid news id: must be a positive integer")
+		return
+	}
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil || id <= 0 {
+		respondError(w, http.StatusBadRequest, "invalid news id: must be a positive integer")
+		return
+	}
+
+	statuses, found, err := getNewsStatuses(code, id)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "database error")
+		return
+	}
+	if !found {
+		respondError(w, http.StatusNotFound, "news not found")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, statuses)
+}
+
 // NewRouter настраивает маршруты (удобно для HTTP-тестов и запуска из operate).
 func NewRouter() http.Handler {
 	r := mux.NewRouter()
 	r.Handle("/company/add/{code}/{title}", middleware.APIKeyAuth(http.HandlerFunc(addCompany))).Methods("POST")
 	r.Handle("/company/statuses/{code}", middleware.APIKeyAuth(http.HandlerFunc(getCompanyStatusesHandler))).Methods("GET")
 	r.Handle("/article/statuses/{companyCode}/{articleId}", middleware.APIKeyAuth(http.HandlerFunc(getArticleStatusesHandler))).Methods("GET")
+	r.Handle("/news/statuses/{companyCode}/{newsId}", middleware.APIKeyAuth(http.HandlerFunc(getNewsStatusesHandler))).Methods("GET")
 	return r
 }
