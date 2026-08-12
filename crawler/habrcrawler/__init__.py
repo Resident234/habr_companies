@@ -47,6 +47,8 @@ from . import habr_news
 from . import habr_posts
 from . import company_categories
 from . import company_posts
+from . import company_articles
+from . import company_news
 
 
 LOGGER = logging.getLogger(__name__)
@@ -148,6 +150,8 @@ class Crawler:
         self.habr_profile_mode = bool(config.read('Habr', 'ProfileMode'))
         self.habr_posts_mode = bool(config.read('Habr', 'PostsMode'))
         self.habr_news_mode = bool(config.read('Habr', 'NewsMode'))
+        self.habr_articles_mode = bool(config.read('Habr', 'ArticlesMode'))
+        self.habr_news_pages_mode = bool(config.read('Habr', 'NewsPagesMode'))
         self.habr_post_pages_mode = bool(config.read('Habr', 'PostPagesMode'))
         self.habr_generator = None
 
@@ -172,6 +176,20 @@ class Crawler:
                 self._seeds = []
                 self.habr_generator = self.loop.run_until_complete(
                     company_posts.seed_from_database(self))
+            elif self.habr_mode and self.habr_articles_mode:
+                # Habr articles mode: one articles list page per company is
+                # queued up front; further pages are chained from the
+                # parser. Articles are saved to the articles table.
+                self._seeds = []
+                self.habr_generator = self.loop.run_until_complete(
+                    company_articles.seed_from_database(self))
+            elif self.habr_mode and self.habr_news_pages_mode:
+                # Habr news pages mode: one news list page per company is
+                # queued up front; further pages are chained from the
+                # parser. News are saved to the news table.
+                self._seeds = []
+                self.habr_generator = self.loop.run_until_complete(
+                    company_news.seed_from_database(self))
             elif self.habr_mode and self.habr_news_mode:
                 # Habr news mode: seeds come from the companies table in
                 # MySQL, generated lazily in batches by news id

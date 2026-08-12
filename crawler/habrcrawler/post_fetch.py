@@ -27,6 +27,8 @@ from . import habr_news_parse
 from . import habr_post_parse
 from . import company_categories
 from . import company_posts
+from . import company_articles
+from . import company_news
 
 
 LOGGER = logging.getLogger(__name__)
@@ -261,32 +263,54 @@ async def post_2xx(f, url, ridealong, priority, host_geoip, json_log, crawler):
                 except Exception as e:
                     stats.stats_sum('habr posts save errors', 1)
                     LOGGER.warning('failed to save posts %s: %s', url.url, e)
+            elif ridealong.get('articles_page'):
+                # Company articles list page: extract articles, chain next page
+                try:
+                    page = ridealong.get('articles_page_number') or 1
+                    count = await company_articles.parse_and_save_articles(
+                        body, company_code, page, crawler=crawler)
+                    json_log['habr_articles_found'] = count
+                except Exception as e:
+                    stats.stats_sum('habr articles save errors', 1)
+                    LOGGER.warning('failed to save articles %s: %s', url.url, e)
+            elif ridealong.get('news_page'):
+                # Company news list page: extract news, chain next page
+                try:
+                    page = ridealong.get('news_page_number') or 1
+                    count = await company_news.parse_and_save_news(
+                        body, company_code, page, crawler=crawler)
+                    json_log['habr_news_found'] = count
+                except Exception as e:
+                    stats.stats_sum('habr news save errors', 1)
+                    LOGGER.warning('failed to save news %s: %s', url.url, e)
+            elif ridealong.get('articles_list_page'):
+                # Company articles list page: queue detail pages, chain next page
+                try:
+                    page = ridealong.get('articles_list_page_number') or 1
+                    count = await company_articles.parse_and_save_articles_list(
+                        body, company_code, page, crawler=crawler)
+                    json_log['habr_articles_list_found'] = count
+                except Exception as e:
+                    stats.stats_sum('habr articles list save errors', 1)
+                    LOGGER.warning('failed to save articles list %s: %s', url.url, e)
+            elif ridealong.get('news_list_page'):
+                # Company news list page: queue detail pages, chain next page
+                try:
+                    page = ridealong.get('news_list_page_number') or 1
+                    count = await company_news.parse_and_save_news_list(
+                        body, company_code, page, crawler=crawler)
+                    json_log['habr_news_list_found'] = count
+                except Exception as e:
+                    stats.stats_sum('habr news list save errors', 1)
+                    LOGGER.warning('failed to save news list %s: %s', url.url, e)
             elif ridealong.get('news_id') is not None:
                 # Company news page: extract news data
                 try:
-                    saved = await habr_news_parse.parse_and_save_news(
-                        body, url.url, company_code)
+                    saved = await habr_news_parse.parse_and_save_news(body, url.url, company_code)
                     json_log['habr_news_saved'] = bool(saved)
                 except Exception as e:
                     stats.stats_sum('habr news save errors', 1)
                     LOGGER.warning('failed to save news %s: %s', url.url, e)
-            elif ridealong.get('post_id') is not None:
-                # Company post page: extract post data
-                try:
-                    saved = await habr_post_parse.parse_and_save_post(
-                        body, url.url, company_code)
-                    json_log['habr_post_saved'] = bool(saved)
-                except Exception as e:
-                    stats.stats_sum('habr post save errors', 1)
-                    LOGGER.warning('failed to save post %s: %s', url.url, e)
-            else:
-                # Article page: extract article data
-                try:
-                    saved = await habr_parse.parse_and_save(body, url.url, company_code)
-                    json_log['habr_article_saved'] = bool(saved)
-                except Exception as e:
-                    stats.stats_sum('habr save errors', 1)
-                    LOGGER.warning('failed to save article %s: %s', url.url, e)
             return
 
         try:

@@ -136,12 +136,16 @@ Habr:
   ProfileMode: False  # if True, crawl company profiles instead of articles
   PostsMode: False  # if True, crawl company posts lists instead of articles
   NewsMode: False  # if True, crawl company news instead of articles
+  ArticlesMode: False  # if True, crawl company articles lists (paginated)
+  NewsPagesMode: False  # if True, crawl company news lists (paginated)
   ArticleIdStart: 1
   ArticleIdEnd: 10000000
   UrlTemplate: 'https://habr.com/ru/companies/{company}/articles/{article_id}/'
+  ArticlesUrlTemplate: 'https://habr.com/ru/companies/{company}/articles/'
   ProfileUrlTemplate: 'https://habr.com/ru/companies/{company}/profile/'
   PostsUrlTemplate: 'https://habr.com/ru/companies/{company}/posts/'
   NewsUrlTemplate: 'https://habr.com/ru/companies/{company}/news/{news_id}/'
+  NewsPagesUrlTemplate: 'https://habr.com/ru/companies/{company}/news/'
   NewsIdStart: 1
   NewsIdEnd: 10000000
   PostPagesMode: False  # if True, crawl company posts by id range

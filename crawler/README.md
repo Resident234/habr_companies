@@ -69,7 +69,12 @@ Habr:
   NewsUrlTemplate: 'https://habr.com/ru/companies/{company}/news/{news_id}/'
   NewsIdStart: 1
   NewsIdEnd: 10000000
-  # Режимы (взаимоисключающие, проверяются сверху вниз):
+  # Новые режимы пагинации (взаимоисключающие, проверяются сверху вниз):
+  ArticlesMode: False       # True = собирать статьи через пагинацию /companies/{code}/articles/
+  ArticlesUrlTemplate: 'https://habr.com/ru/companies/{company}/articles/'
+  NewsPagesMode: False      # True = собирать новости через пагинацию /companies/{code}/news/
+  NewsPagesUrlTemplate: 'https://habr.com/ru/companies/{company}/news/'
+  # Старые режимы (перебор по ID):
   ProfileMode: False    # True = собирать отрасли из профилей компаний
   PostsMode: False      # True = собирать посты из ленты /companies/{code}/posts/
   NewsMode: False       # True = собирать новости перебором /companies/{code}/news/{id}/
@@ -424,6 +429,80 @@ ALTER TABLE companies
 ```
 python -m pytest tests/test_habr_parse.py tests/test_habr_posts_parse.py tests/test_habr_news_parse.py -v
 ```
+
+## Новые режимы пагинации (ArticlesMode / NewsPagesMode)
+
+Начиная с текущей версии поддерживаются два новых режима сбора данных — **постраничная пагинация** вместо перебора по ID.
+
+### ArticlesMode
+- **Включение**: `Habr.ArticlesMode: True`
+- **URL шаблон**: `Habr.ArticlesUrlTemplate` (по умолчанию `https://habr.com/ru/companies/{company}/articles/`)
+- **Принцип работы**: Краулер обходит страницы списка статей компании (`page=1, 2, 3...`), извлекает все статьи на каждой странице и сохраняет их в БД. Далее автоматически ставит в очередь следующую страницу, если на текущей были найдены статьи.
+- **Что сохраняется**: те же поля, что и для отдельных статей (`articles` + `article_hubs`).
+- **Плюсы**: не нужно знать диапазон ID, собираются только реально существующие статьи, быстрее при большом количестве статей у компании.
+
+### NewsPagesMode
+- **Включение**: `Habr.NewsPagesMode: True`
+- **URL шаблон**: `Habr.NewsPagesUrlTemplate` (по умолчанию `https://habr.com/ru/companies/{company}/news/`)
+- **Принцип работы**: Аналогично `ArticlesMode`, но для страницы новостей компании (`/news/`).
+- **Что сохраняется**: новости в таблицу `news` + связи с хабами в `news_hubs`.
+
+### Приоритет режимов (проверяются сверху вниз)
+1. `ProfileMode` — сбор отраслей из профилей компаний
+2. `PostsMode` — сбор постов через пагинацию `/posts/`
+3. **`ArticlesMode` — сбор статей через пагинацию `/articles/`** ← **новое**
+4. **`NewsPagesMode` — сбор новостей через пагинацию `/news/`** ← **новое**
+5. `NewsMode` — старый режим перебора новостей по ID (`/news/{id}/`)
+6. Перебор статей по ID (`ArticleIdStart`..`ArticleIdEnd`) — базовый режим
+
+> **Важно**: Режимы взаимоисключающие — включите только один из них одновременно. Если включено несколько, сработает первый по списку.
+
+### Пример конфигурации для ArticlesMode
+```yaml
+Habr:
+  Enabled: True
+  ArticlesMode: True
+  ArticlesUrlTemplate: 'https://habr.com/ru/companies/{company}/articles/'
+  # Остальные режимы должны быть False:
+  ProfileMode: False
+  PostsMode: False
+  NewsPagesMode: False
+  NewsMode: False
+```
+
+### Пример конфигурации для NewsPagesMode
+```yaml
+Habr:
+  Enabled: True
+  NewsPagesMode: True
+  NewsPagesUrlTemplate: 'https://habr.com/ru/companies/{company}/news/'
+  ProfileMode: False
+  PostsMode: False
+  ArticlesMode: False
+  NewsMode: False
+```
+
+### Структура данных (таблицы БД)
+Новые режимы используют **те же таблицы**, что и старые:
+- `articles` — статьи (при ArticlesMode)
+- `news` — новости (при NewsPagesMode)
+- `article_hubs` / `news_hubs` — связи с хабами
+- `hubs` — справочник хабов (пополняется автоматически)
+
+Разница только в **методе сбора**: пагинация списка вместо перебора ID.
+
+### Как это работает внутри
+1. **Генераторы сидов** (`habrcrawler/company_articles.py`, `habrcrawler/company_news.py`) создают `HabrArticlesSeedGenerator` / `HabrNewsSeedGenerator`.
+2. При старте для каждой компании ставится в очередь **первая страница** (`page=1`).
+3. В `post_fetch.py` при обработке ответа с флагом `articles_page` / `news_page` вызывается `parse_and_save_articles()` / `parse_and_save_news()`.
+4. Функции парсят HTML списка, сохраняют записи в БД, привязывают хабы.
+5. Если на странице были записи, генератор автоматически ставит в очередь **следующую страницу** (`page+1`).
+6. Процесс продолжается, пока страница не вернётся пустой.
+
+### Ограничение скорости
+Rate limit `Crawl.MaxHostQPS` (по умолчанию 2 rps на `habr.com`) применяется ко всем режимам одинаково. Пагинация не увеличивает нагрузку — она просто заменяет много несуществующих ID на реальные страницы.
+
+---
 
 ## Параллелизм и порядок обхода компаний
 
