@@ -61,6 +61,44 @@ curl -X POST \
   -H "X-API-Key: my-secret-key"
 ```
 
+### Быстрое добавление компании/отрасли
+
+```text
+POST /company/quick-add
+POST /category/quick-add
+X-API-Key: <секретный-ключ>
+Content-Type: application/json
+```
+
+**Тело запроса** (JSON):
+```json
+{ "title": "Яндекс" }
+```
+
+**Ответы:**
+- `201 Created` — запись создана (в `companies` или `category`).
+- `200 OK` — запись уже существует (в `companies` или `category`).
+- `400 Bad Request` — неверный `title` (пустой или слишком длинный).
+- `401 Unauthorized` — неверный API‑ключ.
+- `500 Internal Server Error` — ошибка сервера.
+
+**Пример:**
+```bash
+# Добавить компанию
+curl -X POST "http://localhost:8080/company/quick-add" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: my-secret-key" \
+  -d '{"title":"Яндекс"}'
+
+# Добавить отрасль
+curl -X POST "http://localhost:8080/category/quick-add" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: my-secret-key" \
+  -d '{"title":"Финтех"}'
+```
+
+**Примечание:** сервер генерирует `code` из `title` с помощью транслитерации кириллицы в латиницу.
+
 ### Получение статусов компании
 
 ```text

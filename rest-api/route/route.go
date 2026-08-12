@@ -10,6 +10,7 @@ import (
 
 	dbop "github.com/Resident234/habr_companies/rest-api/dbOp"
 	"github.com/Resident234/habr_companies/rest-api/middleware"
+	"github.com/Resident234/habr_companies/rest-api/util"
 	"github.com/gorilla/mux"
 )
 
@@ -389,6 +390,80 @@ func updatePostStatusHandler(w http.ResponseWriter, r *http.Request) {
 	updateContentStatus(w, r, "companyCode", "postId", "post", updatePostStatus)
 }
 
+// quickAddCompany обрабатывает POST /company/quick-add.
+// Принимает {"title": "..."}, транслитерирует title в code и сохраняет компанию.
+type quickAddRequest struct {
+	Title string `json:"title"`
+}
+
+func quickAddCompany(w http.ResponseWriter, r *http.Request) {
+	var req quickAddRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	title := strings.TrimSpace(req.Title)
+	if !validateTitle(title) {
+		respondError(w, http.StatusBadRequest, "invalid title: must be 1-255 chars")
+		return
+	}
+
+	code := util.Transliterate(title)
+	if code == "" {
+		respondError(w, http.StatusBadRequest, "could not generate code from title")
+		return
+	}
+
+	created, err := upsertCompany(code, title)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "database error")
+		return
+	}
+
+	if created {
+		respondJSON(w, http.StatusCreated, map[string]interface{}{"code": code, "title": title})
+	} else {
+		respondJSON(w, http.StatusOK, map[string]interface{}{"code": code, "title": title})
+	}
+}
+
+// quickAddCategory обрабатывает POST /category/quick-add.
+// Принимает {"title": "..."}, транслитерирует title в code и сохраняет отрасль.
+var upsertCategory = dbop.UpsertCategory
+
+func quickAddCategory(w http.ResponseWriter, r *http.Request) {
+	var req quickAddRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	title := strings.TrimSpace(req.Title)
+	if !validateTitle(title) {
+		respondError(w, http.StatusBadRequest, "invalid title: must be 1-255 chars")
+		return
+	}
+
+	code := util.Transliterate(title)
+	if code == "" {
+		respondError(w, http.StatusBadRequest, "could not generate code from title")
+		return
+	}
+
+	created, err := upsertCategory(code, title)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "database error")
+		return
+	}
+
+	if created {
+		respondJSON(w, http.StatusCreated, map[string]interface{}{"code": code, "title": title})
+	} else {
+		respondJSON(w, http.StatusOK, map[string]interface{}{"code": code, "title": title})
+	}
+}
+
 // NewRouter настраивает маршруты (удобно для HTTP-тестов и запуска из operate).
 func NewRouter() http.Handler {
 	r := mux.NewRouter()
@@ -401,5 +476,7 @@ func NewRouter() http.Handler {
 	r.Handle("/article/statuses/{companyCode}/{articleId}/{field}/{direction}", middleware.APIKeyAuth(http.HandlerFunc(updateArticleStatusHandler))).Methods("PATCH")
 	r.Handle("/news/statuses/{companyCode}/{newsId}/{field}/{direction}", middleware.APIKeyAuth(http.HandlerFunc(updateNewsStatusHandler))).Methods("PATCH")
 	r.Handle("/post/statuses/{companyCode}/{postId}/{field}/{direction}", middleware.APIKeyAuth(http.HandlerFunc(updatePostStatusHandler))).Methods("PATCH")
+	r.Handle("/company/quick-add", middleware.APIKeyAuth(http.HandlerFunc(quickAddCompany))).Methods("POST")
+	r.Handle("/category/quick-add", middleware.APIKeyAuth(http.HandlerFunc(quickAddCategory))).Methods("POST")
 	return r
 }

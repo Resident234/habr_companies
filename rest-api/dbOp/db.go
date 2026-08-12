@@ -75,6 +75,29 @@ func UpsertCompany(code, title string) (created bool, err error) {
 	return rows == 1, nil
 }
 
+// UpsertCategory добавляет или обновляет отрасль. Возвращает true, если запись создана.
+func UpsertCategory(code, title string) (created bool, err error) {
+	if db == nil {
+		return false, fmt.Errorf("database not initialized")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	res, err := db.ExecContext(ctx,
+		"INSERT INTO category (code, title) VALUES (?, ?) ON DUPLICATE KEY UPDATE title = ?",
+		code, title, title,
+	)
+	if err != nil {
+		return false, err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	return rows == 1, nil
+}
+
 // CompanyStatus — значение action-колонки компании вместе с title из справочника statuses.
 type CompanyStatus struct {
 	Code  string `json:"code"`
