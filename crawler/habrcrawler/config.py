@@ -139,6 +139,9 @@ Habr:
   ArticlesMode: False  # if True, crawl company articles lists (paginated)
   NewsPagesMode: False  # if True, crawl company news lists (paginated)
   LinksMode: False  # if True, crawl company profiles for widget links
+  BannersMode: False  # if True, crawl company profiles for banner links
+  LinksUrlTemplate: 'https://habr.com/ru/companies/{company}/profile/'
+  BannersUrlTemplate: 'https://habr.com/ru/companies/{company}/profile/'
   ArticleIdStart: 1
   ArticleIdEnd: 10000000
   UrlTemplate: 'https://habr.com/ru/companies/{company}/articles/{article_id}/'
@@ -147,7 +150,6 @@ Habr:
   PostsUrlTemplate: 'https://habr.com/ru/companies/{company}/posts/'
   NewsUrlTemplate: 'https://habr.com/ru/companies/{company}/news/{news_id}/'
   NewsPagesUrlTemplate: 'https://habr.com/ru/companies/{company}/news/'
-  LinksUrlTemplate: 'https://habr.com/ru/companies/{company}/profile/'
   NewsIdStart: 1
   NewsIdEnd: 10000000
   PostPagesMode: False  # if True, crawl company posts by id range

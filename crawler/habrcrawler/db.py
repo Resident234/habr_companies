@@ -374,6 +374,22 @@ async def update_company_links(code, links_json):
                 (links_json, code))
 
 
+async def get_company_links(code):
+    '''
+    Return the current links JSON string for a company, or None.
+    '''
+    pool = await init_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                'SELECT links FROM companies WHERE code = %s',
+                (code,))
+            row = await cur.fetchone()
+    if row is None:
+        return None
+    return row[0]
+
+
 async def get_or_create_category(code, title):
     '''
     Ensure a category row exists and return its code (string).

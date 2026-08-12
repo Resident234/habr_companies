@@ -30,6 +30,7 @@ from . import company_posts
 from . import company_articles
 from . import company_news
 from . import company_links
+from . import company_banners
 
 
 LOGGER = logging.getLogger(__name__)
@@ -263,6 +264,15 @@ async def post_2xx(f, url, ridealong, priority, host_geoip, json_log, crawler):
                 except Exception as e:
                     stats.stats_sum('habr links save errors', 1)
                     LOGGER.warning('failed to save widget links %s: %s', url.url, e)
+            elif ridealong.get('banners_page'):
+                # Company profile page: extract banner links
+                try:
+                    saved = await company_banners.parse_and_save_banners(
+                        body, company_code)
+                    json_log['habr_banners_saved'] = bool(saved)
+                except Exception as e:
+                    stats.stats_sum('habr banners save errors', 1)
+                    LOGGER.warning('failed to save banner links %s: %s', url.url, e)
             elif ridealong.get('posts_page'):
                 # Company posts list page: extract posts, chain next page
                 try:
