@@ -10,4 +10,10 @@
 
     await processor.init();
     console.log('[index] CompanyProcessor.init() completed');
+
+    // Initialize text selection panel
+    const panelModuleUrl = chrome.runtime.getURL('content_scripts/textSelectionPanel.js');
+    console.log('[index] Importing textSelectionPanel module:', panelModuleUrl);
+    await import(panelModuleUrl);
+    console.log('[index] Text selection panel initialized');
 })();
