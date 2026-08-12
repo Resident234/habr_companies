@@ -99,6 +99,74 @@ curl -X POST "http://localhost:8080/category/quick-add" \
 
 **Примечание:** сервер генерирует `code` из `title` с помощью транслитерации кириллицы в латиницу.
 
+### Закладки комментариев
+
+Добавление и удаление закладок комментариев (используется Chrome-расширением
+при клике на ★ в интерфейсе Habr).
+
+#### Добавление закладки комментария
+
+```text
+POST /comment/add
+X-API-Key: <секретный-ключ>
+Content-Type: application/json
+```
+
+**Тело запроса** (JSON):
+```json
+{
+  "text": "Текст комментария (до 500 символов)",
+  "entity_code": "posts",
+  "entity_id": 1064400,
+  "comment_id": 29901582
+}
+```
+
+- `text` — текст комментария (извлекается расширением из DOM);
+- `entity_code` — тип сущности: `posts`, `articles` или `news`;
+- `entity_id` — числовой ID сущности (поста, статьи или новости);
+- `comment_id` — числовой ID комментария на Habr.
+
+**Ответы:**
+- `201 Created` — закладка создана;
+- `200 OK` — закладка уже существует;
+- `400 Bad Request` — невалидные параметры;
+- `401 Unauthorized` — неверный API-ключ;
+- `500 Internal Server Error` — ошибка сервера.
+
+**Пример:**
+```bash
+curl -X POST "http://localhost:8080/comment/add" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: my-secret-key" \
+  -d '{"text":"Комментарий","entity_code":"posts","entity_id":1064400,"comment_id":29901582}'
+```
+
+#### Удаление закладки комментария
+
+```text
+DELETE /comment/{commentId}
+X-API-Key: <секретный-ключ>
+```
+
+- `commentId` — числовой ID комментария.
+
+**Ответы:**
+- `204 No Content` — закладка удалена;
+- `404 Not Found` — закладка не найдена;
+- `401 Unauthorized` — неверный API-ключ;
+- `500 Internal Server Error` — ошибка сервера.
+
+**Пример:**
+```bash
+curl -X DELETE "http://localhost:8080/comment/29901582" \
+  -H "X-API-Key: my-secret-key"
+```
+
+**Примечание:** Chrome-расширение вызывает эти эндпоинты при клике на ★ в
+интерфейсе комментариев Habr. Сущность и её ID определяются из URL страницы
+или мета-тега `og:url`.
+
 ### Получение статусов компании
 
 ```text

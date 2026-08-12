@@ -390,3 +390,60 @@ func GetPostsStatuses(companyCode string, ids []int64) (statuses *PostsStatuses,
 
 	return result, nil
 }
+
+// Comment — структура закладки комментария.
+type Comment struct {
+	ID         int64  `json:"id"`
+	Text       string `json:"text"`
+	EntityCode string `json:"entity_code"`
+	EntityID   int64  `json:"entity_id"`
+	CommentID  int64  `json:"comment_id"`
+	CreatedAt  string `json:"created_at"`
+}
+
+// UpsertComment добавляет или обновляет закладку комментария.
+// Возвращает true, если запись создана.
+func UpsertComment(text, entityCode string, entityID, commentID int64) (created bool, err error) {
+	if db == nil {
+		return false, fmt.Errorf("database not initialized")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	res, err := db.ExecContext(ctx,
+		"INSERT INTO comments (text, entity_code, entity_id, comment_id) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE text = ?",
+		text, entityCode, entityID, commentID, text,
+	)
+	if err != nil {
+		return false, err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	// RowsAffected для INSERT ... ON DUPLICATE KEY UPDATE:
+	// 1 — новая строка, 2 — обновлена существующая, 0 — значения не изменились.
+	return rows == 1, nil
+}
+
+// DeleteComment удаляет закладку комментария по comment_id.
+// Возвращает true, если запись удалена.
+func DeleteComment(commentID int64) (deleted bool, err error) {
+	if db == nil {
+		return false, fmt.Errorf("database not initialized")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	res, err := db.ExecContext(ctx, "DELETE FROM comments WHERE comment_id = ?", commentID)
+	if err != nil {
+		return false, err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	return rows > 0, nil
+}

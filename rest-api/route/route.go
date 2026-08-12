@@ -464,6 +464,103 @@ func quickAddCategory(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// CommentAddRequest — структура запроса для добавления закладки комментария.
+type CommentAddRequest struct {
+	Text        string `json:"text"`
+	EntityCode  string `json:"entity_code"`
+	EntityID    int64  `json:"entity_id"`
+	CommentID   int64  `json:"comment_id"`
+}
+
+// upsertComment вызывается из обработчика; подменяется в тестах.
+var upsertComment = dbop.UpsertComment
+
+// deleteComment вызывается из обработчика; подменяется в тестах.
+var deleteComment = dbop.DeleteComment
+
+// addCommentHandler обрабатывает POST /comment/add.
+// Принимает JSON: {"text": "...", "entity_code": "posts", "entity_id": 1064400, "comment_id": 29901582}
+func addCommentHandler(w http.ResponseWriter, r *http.Request) {
+	var req CommentAddRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	req.Text = strings.TrimSpace(req.Text)
+	if req.Text == "" {
+		respondError(w, http.StatusBadRequest, "text is required")
+		return
+	}
+
+	// Validate entity_code
+	validEntities := map[string]bool{"news": true, "articles": true, "posts": true}
+	if !validEntities[req.EntityCode] {
+		respondError(w, http.StatusBadRequest, "invalid entity_code: must be one of news, articles, posts")
+		return
+	}
+
+	if req.EntityID <= 0 {
+		respondError(w, http.StatusBadRequest, "entity_id must be positive")
+		return
+	}
+
+	if req.CommentID <= 0 {
+		respondError(w, http.StatusBadRequest, "comment_id must be positive")
+		return
+	}
+
+	created, err := upsertComment(req.Text, req.EntityCode, req.EntityID, req.CommentID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "database error")
+		return
+	}
+
+	if created {
+		respondJSON(w, http.StatusCreated, map[string]interface{}{
+			"text":         req.Text,
+			"entity_code":  req.EntityCode,
+			"entity_id":    req.EntityID,
+			"comment_id":   req.CommentID,
+		})
+	} else {
+		respondJSON(w, http.StatusOK, map[string]interface{}{
+			"text":         req.Text,
+			"entity_code":  req.EntityCode,
+			"entity_id":    req.EntityID,
+			"comment_id":   req.CommentID,
+		})
+	}
+}
+
+// deleteCommentHandler обрабатывает DELETE /comment/{commentId}.
+func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	commentIDStr := vars["commentId"]
+
+	commentID, err := strconv.ParseInt(commentIDStr, 10, 64)
+	if err != nil || commentID <= 0 {
+		respondError(w, http.StatusBadRequest, "invalid comment_id")
+		return
+	}
+
+	deleted, err := deleteComment(commentID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "database error")
+		return
+	}
+
+	if !deleted {
+		respondError(w, http.StatusNotFound, "comment not found")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"deleted": true,
+		"comment_id": commentID,
+	})
+}
+
 // NewRouter настраивает маршруты (удобно для HTTP-тестов и запуска из operate).
 func NewRouter() http.Handler {
 	r := mux.NewRouter()
@@ -478,5 +575,8 @@ func NewRouter() http.Handler {
 	r.Handle("/post/statuses/{companyCode}/{postId}/{field}/{direction}", middleware.APIKeyAuth(http.HandlerFunc(updatePostStatusHandler))).Methods("PATCH")
 	r.Handle("/company/quick-add", middleware.APIKeyAuth(http.HandlerFunc(quickAddCompany))).Methods("POST")
 	r.Handle("/category/quick-add", middleware.APIKeyAuth(http.HandlerFunc(quickAddCategory))).Methods("POST")
+	// Comment bookmark routes
+	r.Handle("/comment/add", middleware.APIKeyAuth(http.HandlerFunc(addCommentHandler))).Methods("POST")
+	r.Handle("/comment/{commentId}", middleware.APIKeyAuth(http.HandlerFunc(deleteCommentHandler))).Methods("DELETE")
 	return r
 }
