@@ -360,6 +360,20 @@ async def update_company_link(code, link):
                 (link, code))
 
 
+async def update_company_links(code, links_json):
+    '''
+    Store the widget links extracted from the profile page
+    (<ul class="tm-widget-links__list"> > <a class="tm-widget-links__link">).
+    links_json should be a JSON string (e.g., from json.dumps()).
+    '''
+    pool = await init_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                'UPDATE companies SET links = %s WHERE code = %s',
+                (links_json, code))
+
+
 async def get_or_create_category(code, title):
     '''
     Ensure a category row exists and return its code (string).

@@ -49,6 +49,7 @@ from . import company_categories
 from . import company_posts
 from . import company_articles
 from . import company_news
+from . import company_links
 
 
 LOGGER = logging.getLogger(__name__)
@@ -153,6 +154,7 @@ class Crawler:
         self.habr_articles_mode = bool(config.read('Habr', 'ArticlesMode'))
         self.habr_news_pages_mode = bool(config.read('Habr', 'NewsPagesMode'))
         self.habr_post_pages_mode = bool(config.read('Habr', 'PostPagesMode'))
+        self.habr_links_mode = bool(config.read('Habr', 'LinksMode'))
         self.habr_generator = None
 
         if load is not None:
@@ -169,6 +171,12 @@ class Crawler:
                 self._seeds = []
                 self.habr_generator = self.loop.run_until_complete(
                     company_categories.seed_from_database(self))
+            elif self.habr_mode and self.habr_links_mode:
+                # Habr links mode: one url per company profile page,
+                # widget links are extracted and saved to companies.links
+                self._seeds = []
+                self.habr_generator = self.loop.run_until_complete(
+                    company_links.seed_from_database(self))
             elif self.habr_mode and self.habr_posts_mode:
                 # Habr posts mode: one posts list page per company is
                 # queued up front; further pages are chained from the
