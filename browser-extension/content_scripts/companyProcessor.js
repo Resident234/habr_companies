@@ -4,11 +4,13 @@ import { CompanyApiClient } from './companyApiClient.js';
 import { CompanyExtractor } from './companyExtractor.js';
 import { MessageControl } from './messageControl.js';
 import { StatusBadges } from './statusBadges.js';
+import { CommentBookmarkWatcher } from './commentBookmarkWatcher.js';
 
 export class CompanyProcessor {
     constructor() {
         this._browserApi = new BrowserAPI();
         this._apiClient = new CompanyApiClient();
+        this._commentWatcher = new CommentBookmarkWatcher();
     }
 
     async init() {
@@ -20,16 +22,23 @@ export class CompanyProcessor {
             console.log('[CompanyProcessor.init] Page load event fired');
         }
 
+        // Initialize comment bookmark watcher for all pages with comments
+        await this._commentWatcher.init();
+        console.log('[CompanyProcessor.init] CommentBookmarkWatcher initialized');
+
+        // Only process company-specific logic on company pages
+        if (!this._isCorrectPage()) {
+            console.log('[CompanyProcessor.init] Not a company page, skipping company-specific initialization');
+            return;
+        }
+
         const url = new URL(window.location.href);
         const patternUrl = new URL(CONFIG.URL_PATTERN);
         console.log('[CompanyProcessor.init] Current URL:', url.href);
         console.log('[CompanyProcessor.init] Pattern URL:', CONFIG.URL_PATTERN);
         console.log('[CompanyProcessor.init] Pathname match:', url.pathname, 'starts with', patternUrl.pathname.replace(/\*$/, ''), '→', url.pathname.startsWith(patternUrl.pathname.replace(/\*$/, '')));
 
-        if (!this._isCorrectPage()) {
-            console.log('[CompanyProcessor.init] Not a correct page, skipping');
-            return;
-        }
+
 
         const articleMatch = url.pathname.match(/^\/ru\/companies\/([a-zA-Z0-9_-]+)\/articles\/(\d+)\/?$/);
         const newsMatch = url.pathname.match(/^\/ru\/companies\/([a-zA-Z0-9_-]+)\/news\/(\d+)\/?$/);
@@ -159,3 +168,4 @@ export class CompanyProcessor {
         return url.pathname.startsWith(patternPath);
     }
 }
+

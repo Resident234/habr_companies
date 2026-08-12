@@ -369,4 +369,120 @@ export class CompanyApiClient {
             `/post/statuses/${encodeURIComponent(companyCode)}/${encodeURIComponent(postId)}/${encodeURIComponent(field)}/${encodeURIComponent(direction)}`
         );
     }
+
+    /**
+     * Добавить комментарий в закладки.
+     * @param {Object} data
+     * @param {string} data.text — текст комментария
+     * @param {string} data.entity_code — news | articles | posts
+     * @param {number} data.entity_id — ID сущности
+     * @param {number} data.comment_id — ID комментария
+     * @returns {Promise<Object>}
+     */
+    async addComment(data) {
+        const baseUrl = await this._getBaseUrl();
+        const url = `${baseUrl}/comment/add`;
+
+        try {
+            const response = await new Promise((resolve, reject) => {
+                const port = chrome.runtime.connect({ name: 'fetch' });
+                let settled = false;
+
+                port.onMessage.addListener((msg) => {
+                    settled = true;
+                    port.disconnect();
+                    resolve(msg);
+                });
+
+                port.onDisconnect.addListener(() => {
+                    if (settled) return;
+                    const error = chrome.runtime.lastError;
+                    reject(new Error(error?.message || 'Background port closed unexpectedly'));
+                });
+
+                port.postMessage({
+                    type: 'FETCH_REQUEST',
+                    url: url,
+                    method: 'POST',
+                    headers: {
+                        'X-API-Key': CONFIG.API_KEY,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+            });
+
+            if (response.error) throw new Error(response.error);
+
+            if (!response.ok) {
+                return {
+                    message: `Ошибка добавления комментария: status[${response.status}]`,
+                    type: 'error'
+                };
+            }
+
+            return {
+                message: `Комментарий добавлен успешно: id[${data.comment_id}]`,
+                type: 'success'
+            };
+        } catch (error) {
+            console.error('[CompanyApiClient.addComment] Fetch failed:', error);
+            throw new Error(`Could not send comment to ${url}`);
+        }
+    }
+
+    /**
+     * Удалить закладку комментария.
+     * @param {number} commentId — ID комментария
+     * @returns {Promise<Object>}
+     */
+    async deleteComment(commentId) {
+        const baseUrl = await this._getBaseUrl();
+        const url = `${baseUrl}/comment/${commentId}`;
+
+        try {
+            const response = await new Promise((resolve, reject) => {
+                const port = chrome.runtime.connect({ name: 'fetch' });
+                let settled = false;
+
+                port.onMessage.addListener((msg) => {
+                    settled = true;
+                    port.disconnect();
+                    resolve(msg);
+                });
+
+                port.onDisconnect.addListener(() => {
+                    if (settled) return;
+                    const error = chrome.runtime.lastError;
+                    reject(new Error(error?.message || 'Background port closed unexpectedly'));
+                });
+
+                port.postMessage({
+                    type: 'FETCH_REQUEST',
+                    url: url,
+                    method: 'DELETE',
+                    headers: {
+                        'X-API-Key': CONFIG.API_KEY
+                    }
+                });
+            });
+
+            if (response.error) throw new Error(response.error);
+
+            if (!response.ok) {
+                return {
+                    message: `Ошибка удаления комментария: id[${commentId}], status[${response.status}]`,
+                    type: 'error'
+                };
+            }
+
+            return {
+                message: `Комментарий удалён успешно: id[${commentId}]`,
+                type: 'success'
+            };
+        } catch (error) {
+            console.error('[CompanyApiClient.deleteComment] Fetch failed:', error);
+            throw new Error(`Could not delete comment "${commentId}" from ${url}`);
+        }
+    }
 }
