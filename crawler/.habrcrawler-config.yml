@@ -1,6 +1,6 @@
 root: True
 
-# Параметры подключения к MySQL (замените на реальные)
+# Параметры подключения к MySQL
 Database:
   Host: localhost
   Port: 3306
@@ -11,14 +11,14 @@ Database:
   MaxPoolSize: 10  # максимальный размер пула MySQL
 
 Habr:
-  Enabled: True
+  ArticlesMode: True
   ProfileMode: False  # True = crawl company profiles for categories
   PostsMode: False    # True = crawl company posts lists (paginated)
   NewsMode: False     # True = crawl company news by id range
   LinksMode: False    # True = crawl company profiles for widget links
   ArticleIdStart: 1
   ArticleIdEnd: 10000000
-  UrlTemplate: 'https://habr.com/ru/companies/{company}/articles/{article_id}/'
+  ArticleUrlTemplate: 'https://habr.com/ru/companies/{company}/articles/{article_id}/'
   ProfileUrlTemplate: 'https://habr.com/ru/companies/{company}/profile/'
   PostsUrlTemplate: 'https://habr.com/ru/companies/{company}/posts/'
   NewsUrlTemplate: 'https://habr.com/ru/companies/{company}/news/{news_id}/'

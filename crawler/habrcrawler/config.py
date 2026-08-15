@@ -144,7 +144,7 @@ Habr:
   BannersUrlTemplate: 'https://habr.com/ru/companies/{company}/profile/'
   ArticleIdStart: 1
   ArticleIdEnd: 10000000
-  UrlTemplate: 'https://habr.com/ru/companies/{company}/articles/{article_id}/'
+  ArticleUrlTemplate: 'https://habr.com/ru/companies/{company}/articles/{article_id}/'
   ArticlesUrlTemplate: 'https://habr.com/ru/companies/{company}/articles/'
   ProfileUrlTemplate: 'https://habr.com/ru/companies/{company}/profile/'
   PostsUrlTemplate: 'https://habr.com/ru/companies/{company}/posts/'

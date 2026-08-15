@@ -26,7 +26,7 @@ class HabrSeedGenerator:
     def __init__(self, crawler):
         self.crawler = crawler
         self.template = config.read(
-            'Habr', 'UrlTemplate') or \
+            'Habr', 'ArticleUrlTemplate') or \
             'https://habr.com/ru/companies/{company}/articles/{article_id}/'
         self.id_start = int(config.read('Habr', 'ArticleIdStart') or 1)
         self.id_end = int(config.read('Habr', 'ArticleIdEnd') or 10000000)
