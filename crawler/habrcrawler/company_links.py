@@ -42,7 +42,7 @@ class HabrCompanyLinksSeedGenerator:
     def __init__(self, crawler):
         self.crawler = crawler
         self.template = config.read(
-            'Habr', 'LinksUrlTemplate') or PROFILE_URL_TEMPLATE
+            'Habr', 'ProfileUrlTemplate') or PROFILE_URL_TEMPLATE
         self.companies = []
         self.index = 0
         self.exhausted = False

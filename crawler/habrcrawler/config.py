@@ -133,14 +133,13 @@ Database:
 
 Habr:
   ArticlesMode: False  # if True, crawl company articles by numeric ID range
-  ProfileMode: False  # if True, crawl company profiles instead of articles
+  CategoriesMode: False  # if True, crawl company profiles for categories
   PostsMode: False  # if True, crawl company posts by numeric ID range
   NewsMode: False  # if True, crawl company news by numeric ID range
   ArticlesPagesMode: False  # if True, crawl company articles lists (paginated)
   NewsPagesMode: False  # if True, crawl company news lists (paginated)
   LinksMode: False  # if True, crawl company profiles for widget links
   BannersMode: False  # if True, crawl company profiles for banner links
-  LinksUrlTemplate: 'https://habr.com/ru/companies/{company}/profile/'
   BannersUrlTemplate: 'https://habr.com/ru/companies/{company}/profile/'
   ArticleIdStart: 1
   ArticleIdEnd: 10000000

@@ -12,24 +12,32 @@ Database:
 
 Habr:
   ArticlesMode: True
-  ProfileMode: False  # True = crawl company profiles for categories
-  PostsMode: False    # True = crawl company posts lists (paginated)
-  NewsMode: False     # True = crawl company news by id range
-  LinksMode: False    # True = crawl company profiles for widget links
+  ArticlesPagesMode: False  # True = crawl company articles lists (paginated)
   ArticleIdStart: 1
   ArticleIdEnd: 10000000
   ArticleUrlTemplate: 'https://habr.com/ru/companies/{company}/articles/{article_id}/'
-  ProfileUrlTemplate: 'https://habr.com/ru/companies/{company}/profile/'
-  PostsUrlTemplate: 'https://habr.com/ru/companies/{company}/posts/'
-  NewsUrlTemplate: 'https://habr.com/ru/companies/{company}/news/{news_id}/'
-  LinksUrlTemplate: 'https://habr.com/ru/companies/{company}/profile/'
-  NewsIdStart: 1
-  NewsIdEnd: 10000000
-  PostPagesMode: False  # True = crawl company posts by id range
-  PostUrlTemplate: 'https://habr.com/ru/companies/{company}/posts/{post_id}/'
+  ArticlesUrlTemplate: 'https://habr.com/ru/companies/{company}/articles/'
+
+  PostsMode: False    # True = crawl company posts by numeric ID range
+  PostPagesMode: False  # True = crawl company posts lists (paginated)
   PostIdStart: 1
   PostIdEnd: 10000000
+  PostUrlTemplate: 'https://habr.com/ru/companies/{company}/posts/{post_id}/'
+  PostsUrlTemplate: 'https://habr.com/ru/companies/{company}/posts/'
+
+  NewsMode: False     # True = crawl company news by numeric ID range
+  NewsPagesMode: False  # True = crawl company news lists (paginated)
+  NewsIdStart: 1
+  NewsIdEnd: 10000000
+  NewsUrlTemplate: 'https://habr.com/ru/companies/{company}/news/{news_id}/'
+  NewsPagesUrlTemplate: 'https://habr.com/ru/companies/{company}/news/'
+
+  CategoriesMode: False  # True = crawl company profiles for categories
+  LinksMode: False    # True = crawl company profiles for widget links
+  BannersMode: False  # True = crawl company profiles for banner links
+
   SeedBatchSize: 20000
+  ProfileUrlTemplate: 'https://habr.com/ru/companies/{company}/profile/'
 
 Crawl:
   MaxWorkers: 10

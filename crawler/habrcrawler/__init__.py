@@ -149,7 +149,7 @@ class Crawler:
         stats.init()
 
         self.habr_articles_mode = bool(config.read('Habr', 'ArticlesMode'))
-        self.habr_profile_mode = bool(config.read('Habr', 'ProfileMode'))
+        self.habr_categories_mode = bool(config.read('Habr', 'CategoriesMode'))
         self.habr_posts_mode = bool(config.read('Habr', 'PostsMode'))
         self.habr_news_mode = bool(config.read('Habr', 'NewsMode'))
         self.habr_articles_pages_mode = bool(config.read('Habr', 'ArticlesPagesMode'))
@@ -166,8 +166,8 @@ class Crawler:
             LOGGER.info('at time of loading, stats are')
             stats.report()
         else:
-            if self.habr_articles_mode and self.habr_profile_mode:
-                # Habr profile mode: one url per company profile page,
+            if self.habr_articles_mode and self.habr_categories_mode:
+                # Habr categories mode: one url per company profile page,
                 # categories are extracted and saved to category/
                 # company_categories tables
                 self._seeds = []
