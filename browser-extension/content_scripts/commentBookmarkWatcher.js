@@ -113,7 +113,7 @@ export class CommentBookmarkWatcher {
                 }
             }
             if (!entityCode || !entityId) {
-                const ogUrlMeta = document.querySelector('meta[property='og:url']');
+                const ogUrlMeta = document.querySelector('meta[property="og:url"]');
                 if (ogUrlMeta && ogUrlMeta.content) {
                     const ogUrl = new URL(ogUrlMeta.content);
                     const ogPathParts = ogUrl.pathname.split('/').filter(Boolean);
