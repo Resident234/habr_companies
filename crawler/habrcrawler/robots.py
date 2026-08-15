@@ -12,7 +12,7 @@ import urllib.parse
 import hashlib
 import re
 
-import reppy.robots
+from .robots_parser import Robots as RobotsParser
 #import magic
 
 from .urls import URL
@@ -171,7 +171,7 @@ class Robots:
         return check
 
     def _cache_empty_robots(self, schemenetloc, final_schemenetloc):
-        parsed = reppy.robots.Robots.parse('', '')
+        parsed = RobotsParser.parse('', '')
         self.datalayer.cache_robots(schemenetloc, parsed)
         if final_schemenetloc:
             self.datalayer.cache_robots(final_schemenetloc, parsed)
@@ -316,7 +316,7 @@ class Robots:
         robots_facets(body, self.robotname, json_log)
 
         with stats.record_burn('robots parse', url=schemenetloc):
-            robots = reppy.robots.Robots.parse('', body)
+            robots = RobotsParser.parse('', body)
 
         with stats.record_burn('robots is_allowed', url=schemenetloc):
             check = robots.allowed('/', '*')
