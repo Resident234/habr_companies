@@ -55,9 +55,9 @@ from . import company_banners
 
 LOGGER = logging.getLogger(__name__)
 __title__ = 'habrcrawler'
-__author__ = 'Greg Lindahl and others'
+__author__ = 'Resident234'
 __license__ = 'Apache 2.0'
-__copyright__ = 'Copyright 2016-2017 Greg Lindahl and others'
+__copyright__ = 'Copyright 2016-2026 Resident234'
 
 
 class Crawler:
@@ -148,11 +148,11 @@ class Crawler:
         url_allowed.setup()
         stats.init()
 
-        self.habr_mode = bool(config.read('Habr', 'Enabled'))
+        self.habr_articles_mode = bool(config.read('Habr', 'ArticlesMode'))
         self.habr_profile_mode = bool(config.read('Habr', 'ProfileMode'))
         self.habr_posts_mode = bool(config.read('Habr', 'PostsMode'))
         self.habr_news_mode = bool(config.read('Habr', 'NewsMode'))
-        self.habr_articles_mode = bool(config.read('Habr', 'ArticlesMode'))
+        self.habr_articles_pages_mode = bool(config.read('Habr', 'ArticlesPagesMode'))
         self.habr_news_pages_mode = bool(config.read('Habr', 'NewsPagesMode'))
         self.habr_post_pages_mode = bool(config.read('Habr', 'PostPagesMode'))
         self.habr_links_mode = bool(config.read('Habr', 'LinksMode'))
@@ -166,61 +166,58 @@ class Crawler:
             LOGGER.info('at time of loading, stats are')
             stats.report()
         else:
-            if self.habr_mode and self.habr_profile_mode:
+            if self.habr_articles_mode and self.habr_profile_mode:
                 # Habr profile mode: one url per company profile page,
                 # categories are extracted and saved to category/
                 # company_categories tables
                 self._seeds = []
                 self.habr_generator = self.loop.run_until_complete(
                     company_categories.seed_from_database(self))
-            elif self.habr_mode and self.habr_links_mode:
+            elif self.habr_articles_mode and self.habr_links_mode:
                 # Habr links mode: one url per company profile page,
                 # widget links are extracted and saved to companies.links
                 self._seeds = []
                 self.habr_generator = self.loop.run_until_complete(
                     company_links.seed_from_database(self))
-            elif self.habr_mode and self.habr_banners_mode:
+            elif self.habr_articles_mode and self.habr_banners_mode:
                 # Habr banners mode: one url per company profile page,
                 # banner links are extracted and appended to companies.links
                 self._seeds = []
                 self.habr_generator = self.loop.run_until_complete(
                     company_banners.seed_from_database(self))
-            elif self.habr_mode and self.habr_posts_mode:
-                # Habr posts mode: one posts list page per company is
-                # queued up front; further pages are chained from the
-                # parser. Posts are saved to the posts table.
+            elif self.habr_articles_mode and self.habr_posts_mode:
+                # Habr posts mode: crawl company posts by numeric ID range
                 self._seeds = []
                 self.habr_generator = self.loop.run_until_complete(
-                    company_posts.seed_from_database(self))
-            elif self.habr_mode and self.habr_articles_mode:
-                # Habr articles mode: one articles list page per company is
+                    habr_posts.seed_from_database(self))
+            elif self.habr_articles_mode and self.habr_news_mode:
+                # Habr news mode: crawl company news by numeric ID range
+                self._seeds = []
+                self.habr_generator = self.loop.run_until_complete(
+                    habr_news.seed_from_database(self))
+            elif self.habr_articles_mode and self.habr_articles_pages_mode:
+                # Habr articles pages mode: one articles list page per company is
                 # queued up front; further pages are chained from the
                 # parser. Articles are saved to the articles table.
                 self._seeds = []
                 self.habr_generator = self.loop.run_until_complete(
                     company_articles.seed_from_database(self))
-            elif self.habr_mode and self.habr_news_pages_mode:
+            elif self.habr_articles_mode and self.habr_news_pages_mode:
                 # Habr news pages mode: one news list page per company is
                 # queued up front; further pages are chained from the
                 # parser. News are saved to the news table.
                 self._seeds = []
                 self.habr_generator = self.loop.run_until_complete(
                     company_news.seed_from_database(self))
-            elif self.habr_mode and self.habr_news_mode:
-                # Habr news mode: seeds come from the companies table in
-                # MySQL, generated lazily in batches by news id
+            elif self.habr_articles_mode and self.habr_post_pages_mode:
+                # Habr post pages mode: one posts list page per company is
+                # queued up front; further pages are chained from the
+                # parser. Posts are saved to the posts table.
                 self._seeds = []
                 self.habr_generator = self.loop.run_until_complete(
-                    habr_news.seed_from_database(self))
-            elif self.habr_mode and self.habr_post_pages_mode:
-                # Habr post pages mode: seeds come from the companies
-                # table in MySQL, generated lazily in batches by post id
-                self._seeds = []
-                self.habr_generator = self.loop.run_until_complete(
-                    habr_posts.seed_from_database(self))
-            elif self.habr_mode:
-                # Habr mode: seeds come from the companies table in MySQL,
-                # generated lazily in batches
+                    company_posts.seed_from_database(self))
+            elif self.habr_articles_mode:
+                # Habr articles mode: crawl company articles by numeric ID range
                 self._seeds = []
                 self.habr_generator = self.loop.run_until_complete(
                     habr_seeds.seed_from_database(self))
@@ -500,7 +497,7 @@ class Crawler:
         # from last_processed_article_id + 1 instead of re-crawling the
         # whole range. Only reached for final outcomes (2xx, redirect,
         # unretryable 4xx/1xx) -- retried items return earlier.
-        if self.habr_mode and 'company_code' in ridealong and 'article_id' in ridealong:
+        if self.habr_articles_mode and 'company_code' in ridealong and 'article_id' in ridealong:
             try:
                 await db.update_company_progress(
                     ridealong['company_code'], ridealong['article_id'])
@@ -510,7 +507,7 @@ class Crawler:
                              ridealong['company_code'],
                              ridealong['article_id'], e)
 
-        if self.habr_mode and 'company_code' in ridealong and 'news_id' in ridealong:
+        if self.habr_articles_mode and 'company_code' in ridealong and 'news_id' in ridealong:
             try:
                 await db.update_company_news_progress(
                     ridealong['company_code'], ridealong['news_id'])
@@ -520,7 +517,7 @@ class Crawler:
                              ridealong['company_code'],
                              ridealong['news_id'], e)
 
-        if self.habr_mode and 'company_code' in ridealong and 'post_id' in ridealong:
+        if self.habr_articles_mode and 'company_code' in ridealong and 'post_id' in ridealong:
             try:
                 await db.update_company_posts_progress(
                     ridealong['company_code'], ridealong['post_id'])

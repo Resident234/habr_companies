@@ -132,11 +132,11 @@ Database:
   MaxPoolSize: 10  # maximum MySQL pool connections
 
 Habr:
-  Enabled: False
+  ArticlesMode: False  # if True, crawl company articles by numeric ID range
   ProfileMode: False  # if True, crawl company profiles instead of articles
-  PostsMode: False  # if True, crawl company posts lists instead of articles
-  NewsMode: False  # if True, crawl company news instead of articles
-  ArticlesMode: False  # if True, crawl company articles lists (paginated)
+  PostsMode: False  # if True, crawl company posts by numeric ID range
+  NewsMode: False  # if True, crawl company news by numeric ID range
+  ArticlesPagesMode: False  # if True, crawl company articles lists (paginated)
   NewsPagesMode: False  # if True, crawl company news lists (paginated)
   LinksMode: False  # if True, crawl company profiles for widget links
   BannersMode: False  # if True, crawl company profiles for banner links
@@ -152,7 +152,7 @@ Habr:
   NewsPagesUrlTemplate: 'https://habr.com/ru/companies/{company}/news/'
   NewsIdStart: 1
   NewsIdEnd: 10000000
-  PostPagesMode: False  # if True, crawl company posts by id range
+  PostPagesMode: False  # if True, crawl company posts lists (paginated)
   PostUrlTemplate: 'https://habr.com/ru/companies/{company}/posts/{post_id}/'
   PostIdStart: 1
   PostIdEnd: 10000000
