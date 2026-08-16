@@ -14,6 +14,16 @@
         "description": "Placeholder for the API service URL input field"
     },
 
+    "preferences_message_duration_label": {
+        "message": "Длительность отображения сообщения, секунды:",
+        "description": "Label for the message display duration input field"
+    },
+
+    "preferences_message_duration_input": {
+        "message": "120",
+        "description": "Placeholder for the message display duration input field, value in seconds"
+    },
+
     "preferences_save_btn": {
         "message": "Сохранить",
         "description": "Label for a button saving all the preferences"

@@ -1,8 +1,16 @@
+import { BrowserStorage } from './browserStorage.js';
 import { CONFIG } from '../config.js';
 
 export class MessageControl {
     static get BAR_ID() {
         return 'habr-companies-bar';
+    }
+
+    static get _storage() {
+        if (!MessageControl.__storage) {
+            MessageControl.__storage = new BrowserStorage('preferences');
+        }
+        return MessageControl.__storage;
     }
 
     static show(text, type = 'info') {
@@ -17,10 +25,24 @@ export class MessageControl {
         const bar = MessageControl._buildBar(text, type);
         document.documentElement.append(bar);
 
-        MessageControl._dismissTimer = setTimeout(
-            () => MessageControl.hide(),
-            CONFIG.MESSAGE_DISPLAY_DURATION
-        );
+        MessageControl._getDuration().then(duration => {
+            MessageControl._dismissTimer = setTimeout(
+                () => MessageControl.hide(),
+                duration
+            );
+        }).catch(() => {
+            MessageControl._dismissTimer = setTimeout(
+                () => MessageControl.hide(),
+                CONFIG.MESSAGE_DISPLAY_DURATION
+            );
+        });
+    }
+
+    static async _getDuration() {
+        const data = await MessageControl._storage.get();
+        const stored = data && Number(data.message_display_duration);
+        const valid = Number.isFinite(stored) && stored > 0;
+        return valid ? stored : CONFIG.MESSAGE_DISPLAY_DURATION;
     }
 
     static hide() {

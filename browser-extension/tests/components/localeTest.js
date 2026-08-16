@@ -32,12 +32,12 @@ describe('components/locale', function () {
     });
 
     const testLocaleSymbols = (locale, wrongSymbolsExp) => {
-        const paramSubstitutionExp = /\$\w*\$|highbrighter|shift|ctrl|printscreen/gmi;
+        const technicalTokenExp = /https?:\/\/\S+|\b(?:URL|API|Habr)\b|\$\w*\$|\$\d|highbrighter|shift|ctrl|printscreen/gmi;
 
         Object.getOwnPropertyNames(locale).map(prop => {
             const msg = locale[prop].message;
-            return msg.replace(paramSubstitutionExp, '');
-        }).forEach(msg => 
+            return msg.replace(technicalTokenExp, '');
+        }).forEach(msg =>
             assert(!wrongSymbolsExp.test(msg), `Message '${msg}' contains incorrect symbols`));
     };
 

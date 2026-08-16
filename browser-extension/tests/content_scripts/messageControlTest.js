@@ -1,111 +1,124 @@
 import assert from 'assert';
-import { Randomiser } from '../tools/randomiser.js';
-import { Expectation } from '../tools/expectation.js';
 import { EnvLoader } from '../tools/envLoader.js';
 import { MessageControl } from '../../content_scripts/messageControl.js';
 
 describe('content_script/messageControl', function () {
     this.timeout(0);
-    
+
+    const flushPromises = () => Promise.resolve().then(() => Promise.resolve());
+
     beforeEach('loadResources', done => {
+        MessageControl.__storage = {
+            get: () => Promise.resolve({ message_display_duration: 120000 }),
+        };
         EnvLoader.loadDomModel().then(() => done()).catch(done);
     });
-    
+
     afterEach('releaseResources', () => {
+        clearTimeout(MessageControl._dismissTimer);
+        MessageControl._dismissTimer = null;
+        MessageControl.__storage = null;
         EnvLoader.unloadDomModel();
     });
 
-    const checkMessageControlText = (msgEl, expectedMsg) => {
-        const msgLabelEl = msgEl.querySelector('#' + MessageControl.BLANKET_PARAGRAPH_ELEM_ID);
-        assert(msgLabelEl);
-        assert.strictEqual(msgLabelEl.innerHTML, '' + expectedMsg);
-    };
-
     const getMessageControl = (shouldBePresent = true) => {
-        const msgEl = document.getElementById(MessageControl.BLANKET_ELEM_ID);
+        const msgEl = document.getElementById(MessageControl.BAR_ID);
         assert.strictEqual(msgEl === null, !shouldBePresent);
-
         return msgEl;
     };
 
     describe('#show', function () {
+        it('should render a message control in DOM', async () => {
+            const expectedMessage = 'Company successfully added';
+            MessageControl.show(expectedMessage, 'success');
+            await flushPromises();
 
-        const checkMessageControl = (expectedMsg) => {
             const msgEl = getMessageControl();
-            assert(!msgEl.classList.length);
-
-            checkMessageControlText(msgEl, expectedMsg);
-        };
-
-        it('should render a message control in DOM', () => {
-            const expectedMessage = Randomiser.getRandomNumberUpToMax();
-            MessageControl.show(expectedMessage);
-            
-            checkMessageControl(expectedMessage);
+            assert.strictEqual(msgEl.className,
+                'habr-companies-bar habr-companies-bar--success');
+            assert.strictEqual(msgEl.textContent, expectedMessage);
         });
 
-        it('should render a message control, which won\'t disappear after changing the body tag', () => {
-            const expectedMessage = Randomiser.getRandomNumberUpToMax();
-            MessageControl.show(expectedMessage);
-            
-            const rootDiv = document.createElement('div');
-            rootDiv.innerHTML = Randomiser.getRandomNumberUpToMax();
+        it('should keep the message control when the body contents change', async () => {
+            const expectedMessage = 'Company successfully added';
+            MessageControl.show(expectedMessage, 'success');
+            await flushPromises();
 
-            document.body.innerHTML = rootDiv.outerHTML;
+            document.body.innerHTML = '<div>updated page content</div>';
 
-            checkMessageControl(expectedMessage);
+            const msgEl = getMessageControl();
+            assert.strictEqual(msgEl.textContent, expectedMessage);
+            assert.strictEqual(msgEl.parentElement, document.documentElement);
         });
 
-        it('should rerender a text in a message control when showing different messages', () => {
-            const initialMessage = Randomiser.getRandomNumberUpToMax();
-            MessageControl.show(initialMessage);
-            
-            const expectedMessage = Randomiser.getRandomNumberUpToMax();
-            MessageControl.show(expectedMessage);
-            checkMessageControl(expectedMessage);
+        it('should replace the previous message when showing a new one', async () => {
+            MessageControl.show('Initial message', 'info');
+            await flushPromises();
 
-            assert.strictEqual([...document.querySelectorAll('p')]
-                .includes(n => n.innerHTML === initialMessage), false);
+            MessageControl.show('Updated message', 'error');
+            await flushPromises();
+
+            const msgEl = getMessageControl();
+            assert.strictEqual(msgEl.textContent, 'Updated message');
+            assert.strictEqual(msgEl.className,
+                'habr-companies-bar habr-companies-bar--error');
+            assert.strictEqual(document.querySelectorAll(`#${MessageControl.BAR_ID}`).length, 1);
+        });
+
+        it('should ignore an empty message', () => {
+            MessageControl.show('');
+            assert.strictEqual(getMessageControl(false), null);
         });
     });
 
     describe('#hide', function () {
+        it('should do nothing if there is no message element rendered', () => {
+            MessageControl.hide();
+            assert.strictEqual(getMessageControl(false), null);
+        });
 
-        const checkHiddentMessageControl = (expectedMsg) => {
+        it('should add the hidden class to an existent message element', async () => {
+            const expectedMessage = 'Company successfully added';
+            MessageControl.show(expectedMessage, 'success');
+            await flushPromises();
+
+            MessageControl.hide();
+
             const msgEl = getMessageControl();
-        
-            assert.strictEqual(msgEl.classList.length, 2);
+            assert.strictEqual(msgEl.textContent, expectedMessage);
+            assert(msgEl.classList.contains('habr-companies-bar--hidden'));
+        });
 
-            const actualClasses = [...msgEl.classList];
-            assert(['disappear', 'leave'].every(ec => 
-                actualClasses.filter(ac => ac.endsWith(ec))));
+        it('should be idempotent when hiding an already hidden message', async () => {
+            MessageControl.show('Company successfully added', 'success');
+            await flushPromises();
 
-            checkMessageControlText(msgEl, expectedMsg);
-        };
+            MessageControl.hide();
+            MessageControl.hide();
 
-        it('should do nothing if there is no message element rendered', () =>
-            Expectation.expectResolution(MessageControl.hide(), 
-                () => getMessageControl(false))
-        );
+            const msgEl = getMessageControl();
+            assert.strictEqual(
+                msgEl.classList.contains('habr-companies-bar--hidden'),
+                true
+            );
+        });
+    });
 
-        const buildHiddenMessageControlText = () => {
-            const expectedMessage = Randomiser.getRandomNumberUpToMax();
+    describe('#_getDuration', function () {
+        it('should read the message duration from preferences in milliseconds', async () => {
+            MessageControl.__storage = {
+                get: () => Promise.resolve({ message_display_duration: 45000 }),
+            };
 
-            MessageControl.show(expectedMessage);            
-            return MessageControl.hide().then(() => expectedMessage);
-        };
+            assert.strictEqual(await MessageControl._getDuration(), 45000);
+        });
 
-        it('should add hiding classes to an existent message element', () => 
-            Expectation.expectResolution(buildHiddenMessageControlText(), 
-                expectedMessage => checkHiddentMessageControl(expectedMessage))
-        );
+        it('should use the configured default for an invalid preference', async () => {
+            MessageControl.__storage = {
+                get: () => Promise.resolve({ message_display_duration: 0 }),
+            };
 
-        it('should hide an existent message only once', () => {
-            return Expectation.expectResolution(
-                buildHiddenMessageControlText().then(expectedMessage => { 
-                    return MessageControl.hide().then(() => expectedMessage); 
-                }),
-                expectedMessage => checkHiddentMessageControl(expectedMessage));
+            assert.strictEqual(await MessageControl._getDuration(), 120000);
         });
     });
 });

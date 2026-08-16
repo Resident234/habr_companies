@@ -7,16 +7,26 @@
     <body>
         <form>
             <div id="form--section-api">
-                <label class="locale form--section-header" id="preferences-api-url-label">
-                    API Service URL:
-                </label>
-                <div class="form-section-separated">
-                    <input type="text" class="locale" id="form--section-api--txt-url" 
-                        name="preferences-api-url-input" 
-                        placeholder="https://api.example.com" />
-                </div>
-            </div>
-            <hr />
+                            <label class="locale form--section-header" id="preferences-api-url-label">
+                                API Service URL:
+                            </label>
+                            <div class="form-section-separated">
+                                <input type="text" class="locale" id="form--section-api--txt-url" 
+                                    name="preferences-api-url-input" 
+                                    placeholder="https://api.example.com" />
+                            </div>
+                        </div>
+                        <div id="form--section-message">
+                            <label class="locale form--section-header" id="preferences-message-duration-label">
+                                Message Display Duration (ms):
+                            </label>
+                            <div class="form-section-separated">
+                                <input type="number" class="locale" id="form--section-message--txt-duration" 
+                                    name="preferences-message-duration-input" 
+                                    placeholder="120000" min="1000" />
+                            </div>
+                        </div>
+                        <hr />
 
             <button class="locale" name="preferences-save-btn" type="submit" id="form--btn-submit" disabled>
                 Save
