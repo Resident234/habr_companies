@@ -10,9 +10,33 @@ import (
 	"time"
 )
 
+const maxRecoverLogSize = 5 << 20
+
+func recoverLogPath() string {
+	if p := os.Getenv("RECOVER_LOG_PATH"); p != "" {
+		return p
+	}
+	return "recover.log"
+}
+
+func rotateRecoverLog(path string) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return
+	}
+	if info.Size() < maxRecoverLogSize {
+		return
+	}
+	backup := path + ".1"
+
+	_ = os.Remove(backup)
+	_ = os.Rename(path, backup)
+}
+
 // RecoverMiddleware перехватывает паники внутри HTTP-хендлеров:
 // записывает время, URL, панику и полный стектрейс в recover.log,
 // отвечает клиенту 500 и не даёт процессу упасть.
+
 func RecoverMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
@@ -25,9 +49,12 @@ func RecoverMiddleware(next http.Handler) http.Handler {
 				)
 				// Дублируем в stderr, чтобы паника не потерялась и в журналах.
 				log.Print("PANIC RECOVERED: ", rec)
+
 				// Отдельный файл recover.log в рабочей директории процесса.
 				// Ошибки открытия/записи лога не должны ронять обработчик.
-				if f, err := os.OpenFile("recover.log",
+				path := recoverLogPath()
+				rotateRecoverLog(path)
+				if f, err := os.OpenFile(path,
 					os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644); err == nil {
 					_, _ = f.WriteString(line)
 					_ = f.Close()
@@ -41,4 +68,12 @@ func RecoverMiddleware(next http.Handler) http.Handler {
 		}()
 		next.ServeHTTP(w, r)
 	})
+}
+
+func recoverLogSize(path string) int64 {
+	info, err := os.Stat(path)
+	if err != nil {
+		return 0
+	}
+	return info.Size()
 }
