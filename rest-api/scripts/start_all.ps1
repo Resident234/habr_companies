@@ -151,7 +151,7 @@ Write-Output "Starting ngrok tunnel on port $LocalPort..."
 $ngrokLog = "$env:TEMP\ngrok_startall.log"
 $ngrokErrLog = "$env:TEMP\ngrok_startall.err.log"
 $ngrokProcess = Start-Process -FilePath $NgrokExe `
-    -ArgumentList "http $LocalPort --log=stdout" `
+    -ArgumentList "http $LocalPort --log=stdout --log-format=json --log-level=debug" `
     -WindowStyle Hidden `
     -RedirectStandardOutput $ngrokLog `
     -RedirectStandardError $ngrokErrLog `

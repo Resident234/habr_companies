@@ -576,6 +576,68 @@ reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v HabrCompanies
 |--------|-----------|
 | `scripts/start_all.ps1` | Запускает rest-api + ngrok одной командой (см. [Внешний доступ](#внешний-доступ-ngrok)) |
 
+## Мониторинг и восстановление после паник
+
+### Watchdog (`scripts/watchdog.ps1`)
+
+Скрипт `scripts/watchdog.ps1` запускается как фоновый процесс PowerShell и каждые 5 секунд
+проверяет, что `rest-api.exe` и `ngrok.exe` на месте. При обнаружении пропажи
+(любого из процессов или обоих сразу) watchdog:
+
+1. Записывает в `scripts/watchdog.log` точное время и тип падения (какой процесс
+   пропал, последние известные PID);
+2. Автоматически перезапускает стек сервисов через `scripts/start_all.ps1`.
+
+Запуск watchdog (один экземпляр):
+
+```powershell
+Start-Process -FilePath `powershell` -ArgumentList `-NoProfile -ExecutionPolicy Bypass -File \"H:\s\Work_habr_companies\rest-api\scripts\watchdog.ps1\"` -WindowStyle Hidden
+```
+
+После перезапуска `start_all.ps1` сам останавливает старые экземпляры,
+поэтому watchdog можно не трогать — он просто зафиксирует перезапуск в логе.
+
+### Recovery от паник (`middleware.RecoverMiddleware`)
+
+Все HTTP-хендлеры обёрнуты в `middleware.RecoverMiddleware` (см.
+`middleware/recover.go`): любая паника внутри обработчика перехватывается через
+`recover()`, процесс при этом **не падает**, а клиент получает ответ
+`500 {"error": "internal server error"}`.
+
+При восстановлении после паники в корень `rest-api/` (рабочая директория
+процесса) дописывается файл `recover.log` с записью вида:
+
+```text
+2026-08-16 19:10:05 PANIC RECOVERED method=POST path=/posts/statuses/wirenboard remote=147.30.55.124:42311 panic=runtime error: invalid memory address or nil pointer dereference
+goroutine 45 [running]:
+runtime/debug.Stack(...)
+...
+```
+
+Запись содержит дату/время, метод, URL, удалённый адрес и полный стектрейс
+(`runtime/debug.Stack()`). Дополнительно паника дублируется в stderr
+(`log.Print(`PANIC RECOVERED: …`)`), поэтому видна и в логах запуска.
+
+Мидлвар подключён в `route.NewRouter()` одним вызовом —
+`return middleware.RecoverMiddleware(r)` — и покрывает все маршруты целиком,
+включая запросы до проверки API-ключа.
+
+Фатальные ошибки до запуска роутера (инициализация БД, `.env`) по-прежнему
+завершают процесс с записью в stderr — это нормальное поведение для ошибок
+старта; watchdog в этом случае сам поднимет сервис заново.
+
+### Диагностика падений
+
+| Источник | Что искать |
+|----------|------------|
+| `rest-api/recover.log` | паники, перехваченные мидлваром (метод, URL, стектрейс) |
+| `scripts/watchdog.log` | время и тип падения, автоперезапуски |
+| `scripts/start_run.log` | вывод последнего запуска `start_all.ps1` |
+| `%TEMP%\ngrok_startall.log` | запросы к туннелю (ngrok, debug-уровень) |
+| ngrok UI: `http://localhost:4040` | последние запросы/ответы с кодами и телами |
+
+
+
 ## База данных
 
 Таблица `companies` создаётся вручную (см. `sql/create_companies_table.sql`):

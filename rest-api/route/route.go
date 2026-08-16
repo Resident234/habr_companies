@@ -578,5 +578,5 @@ func NewRouter() http.Handler {
 	// Comment bookmark routes
 	r.Handle("/comment/add", middleware.APIKeyAuth(http.HandlerFunc(addCommentHandler))).Methods("POST")
 	r.Handle("/comment/{commentId}", middleware.APIKeyAuth(http.HandlerFunc(deleteCommentHandler))).Methods("DELETE")
-	return r
+	return middleware.RecoverMiddleware(r)
 }
