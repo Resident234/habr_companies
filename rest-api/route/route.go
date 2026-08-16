@@ -1,4 +1,4 @@
-package route
+﻿package route
 
 import (
 	"encoding/json"
@@ -47,6 +47,8 @@ var updatePostStatus = dbop.UpdatePostStatus
 
 // maxBatchIDs должно совпадать с лимитом в dbOp.GetPostsStatuses.
 const maxBatchIDs = 100
+// maxRequestBody ограничивает размер тела JSON-запросов (защита от DoS).
+const maxRequestBody = 1 << 20 // 1 MB
 
 func validateCode(code string) bool {
 	return len(code) > 0 && len(code) <= 255 && codeRegex.MatchString(code)
@@ -398,7 +400,7 @@ type quickAddRequest struct {
 
 func quickAddCompany(w http.ResponseWriter, r *http.Request) {
 	var req quickAddRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w,r.Body,maxRequestBody)).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -434,7 +436,7 @@ var upsertCategory = dbop.UpsertCategory
 
 func quickAddCategory(w http.ResponseWriter, r *http.Request) {
 	var req quickAddRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w,r.Body,maxRequestBody)).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -482,7 +484,7 @@ var deleteComment = dbop.DeleteComment
 // Принимает JSON: {"text": "...", "entity_code": "posts", "entity_id": 1064400, "comment_id": 29901582}
 func addCommentHandler(w http.ResponseWriter, r *http.Request) {
 	var req CommentAddRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w,r.Body,maxRequestBody)).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
