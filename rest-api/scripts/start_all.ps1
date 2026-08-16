@@ -1,18 +1,15 @@
-# start_all.ps1 — One-command startup: rest-api + ngrok tunnel.
+# start_all.ps1 - One-command startup: rest-api + ngrok tunnel.
 # Run from the rest-api directory:
 #   powershell -ExecutionPolicy Bypass -File .\scripts\start_all.ps1
-
 param(
     [string]$EnvFile
 )
-
 $ErrorActionPreference = "Stop"
 $Host.UI.RawUI.WindowTitle = "rest-api + ngrok"
 
-# ───────────── 1. Resolve paths ─────────────
+# - 1. Resolve paths -
 $ScriptDir  = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectDir = Split-Path -Parent $ScriptDir
-
 if (-not $EnvFile) {
     $defaultEnv = Join-Path $ProjectDir ".env"
     if (Test-Path $defaultEnv) {
@@ -21,15 +18,13 @@ if (-not $EnvFile) {
         $EnvFile = Join-Path (Get-Location) ".env"
     }
 }
-
 if (-not (Test-Path $EnvFile)) {
     Write-Error ".env file not found at: $EnvFile"
     exit 1
 }
-
 Write-Output "Loading config from: $EnvFile"
 
-# ───────────── 2. Parse .env ─────────────
+# - 2. Parse .env -
 $envVars = @{}
 Get-Content $EnvFile | ForEach-Object {
     $line = $_.Trim()
@@ -47,7 +42,6 @@ Get-Content $EnvFile | ForEach-Object {
         }
     }
 }
-
 foreach ($k in $envVars.Keys) {
     if ($envVars[$k] -and -not [Environment]::GetEnvironmentVariable($k, "Process")) {
         [Environment]::SetEnvironmentVariable($k, $envVars[$k], "Process")
@@ -72,7 +66,7 @@ $HttpAddr    = [Environment]::GetEnvironmentVariable("HTTP_ADDR", "Process")
 if (-not $HttpAddr) { $HttpAddr = ":8080" }
 $LocalPort = $HttpAddr -replace "^:", ""
 
-# ───────────── 3. Locate or download ngrok ─────────────
+# - 3. Locate or download ngrok -
 function Find-NgrokExe {
     if ($NgrokExeCfg -and (Test-Path $NgrokExeCfg)) { return $NgrokExeCfg }
     $fromPath = (Get-Command "ngrok.exe" -ErrorAction SilentlyContinue).Source
@@ -82,7 +76,6 @@ function Find-NgrokExe {
     }
     return $null
 }
-
 function Download-Ngrok {
     $zip  = "$env:TEMP\ngrok_setup.zip"
     $dest = "$env:TEMP\ngrok"
@@ -95,22 +88,21 @@ function Download-Ngrok {
     Write-Host "ngrok extracted to: $exe"
     Write-Output $exe
 }
-
 $NgrokExe = Find-NgrokExe
 if (-not $NgrokExe) { $NgrokExe = Download-Ngrok }
 Write-Output "Using ngrok: $NgrokExe"
 
-# ───────────── 4. Configure ngrok authtoken ─────────────
+# - 4. Configure ngrok authtoken -
 Write-Output "Configuring ngrok authtoken..."
 & $NgrokExe config add-authtoken $AuthToken 2>$null
 
-# ───────────── 5. Stop previous instances ─────────────
+# - 5. Stop previous instances -
 Write-Output "Stopping previous instances..."
 Get-Process -Name "rest-api" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Get-Process -Name "ngrok" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 1
 
-# ───────────── 6. Locate or build rest-api.exe ─────────────
+# - 6. Locate or build rest-api.exe -
 $RestApiExe = Join-Path $ProjectDir "rest-api.exe"
 if (-not (Test-Path $RestApiExe)) {
     Write-Output "Building rest-api.exe..."
@@ -127,13 +119,13 @@ if (-not (Test-Path $RestApiExe)) {
     Write-Output "Found: $RestApiExe"
 }
 
-# ───────────── 7. Start rest-api ─────────────
+# - 7. Start rest-api -
 Write-Output "Starting rest-api on :$LocalPort..."
 $apiProcess = Start-Process -FilePath $RestApiExe -WorkingDirectory $ProjectDir -WindowStyle Hidden -PassThru
 $ApiPid = $apiProcess.Id
 Write-Output "rest-api PID: $ApiPid"
 
-# Wait for server to become ready (TCP check — avoids HTTP 404 errors)
+# Wait for server to become ready (TCP check - avoids HTTP 404 errors)
 $ready = $false
 for ($i = 0; $i -lt 20; $i++) {
     Start-Sleep -Seconds 1
@@ -146,19 +138,25 @@ for ($i = 0; $i -lt 20; $i++) {
 if (-not $ready) { Write-Error "rest-api did not become ready"; exit 1 }
 Write-Output "rest-api is responding on :$LocalPort"
 
-# ───────────── 8. Start ngrok ─────────────
+# - 8. Start ngrok -
 Write-Output "Starting ngrok tunnel on port $LocalPort..."
 $ngrokLog = "$env:TEMP\ngrok_startall.log"
 $ngrokErrLog = "$env:TEMP\ngrok_startall.err.log"
+
+Write-Output "Trimming previous ngrok log files..."
+. (Join-Path $ScriptDir 'trim_log.ps1')
+Trim-LogBytes $ngrokLog (512 * 1024)
+Trim-LogBytes $ngrokErrLog (128 * 1024)
+
 $ngrokProcess = Start-Process -FilePath $NgrokExe `
-    -ArgumentList "http $LocalPort --log=stdout --log-format=json --log-level=debug" `
+    -ArgumentList "http $LocalPort --log=stdout --log-format=json --log-level=info" `
     -WindowStyle Hidden `
     -RedirectStandardOutput $ngrokLog `
     -RedirectStandardError $ngrokErrLog `
     -PassThru
 Write-Output "ngrok PID: $($ngrokProcess.Id)"
 
-# ───────────── 9. Get public URL ─────────────
+# - 9. Get public URL -
 Write-Output "Waiting for ngrok tunnel..."
 $publicUrl = $null
 for ($i = 0; $i -lt 20; $i++) {
@@ -171,7 +169,7 @@ for ($i = 0; $i -lt 20; $i++) {
 }
 if (-not $publicUrl) { Write-Error "Could not retrieve ngrok public URL. Check log: $ngrokLog"; exit 1 }
 
-# ───────────── 10. Test external access ─────────────
+# - 10. Test external access -
 Write-Output "Testing external access via ngrok..."
 $testResult = Invoke-WebRequest `
     -Uri "$publicUrl/company/add/_startup_test/StartupTest" `
@@ -186,7 +184,7 @@ if ($testResult) {
     Write-Output "Test request warning - tunnel may still work. Check manually."
 }
 
-# ───────────── 11. Summary ─────────────
+# - 11. Summary -
 Write-Output ""
 Write-Output "============================================"
 Write-Output "  SERVICE IS LIVE"
@@ -202,7 +200,7 @@ Write-Output "  curl -X POST ""$publicUrl/company/add/test/%D1%82%D0%B5%D1%81%D1
 Write-Output ""
 Write-Output "Press Ctrl+C to stop both services, or close this window."
 
-# ───────────── 12. Keep alive ─────────────
+# - 12. Keep alive -
 while ($true) {
     Start-Sleep -Seconds 2
     if ($apiProcess.HasExited) {
