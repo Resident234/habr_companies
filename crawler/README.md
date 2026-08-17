@@ -1,4 +1,4 @@
-# Habr Companies Article Parser
+﻿# Habr Companies Article Parser
 
 Парсер статей компаний с Хабра, построенный на асинхронном
 asyncio-краулере.
@@ -604,3 +604,4 @@ Rate limit `Crawl.MaxHostQPS` (по умолчанию 2 rps на `habr.com`) п
 ## License
 
 Apache 2.0
+Source launch requires a full Git checkout with the parent .git directory.

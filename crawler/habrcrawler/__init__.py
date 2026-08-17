@@ -77,10 +77,10 @@ class Crawler:
 
         try:
             # this works for the installed package
-            self.version = get_distribution(__name__).version
+            self.version = get_distribution('habr-companies-crawler').version
         except DistributionNotFound:
             # this works for an uninstalled git repo, like in the CI infrastructure
-            self.version = get_version(root='..', relative_to=__file__)
+            self.version = get_version(root='../..', relative_to=__file__)
         self.warcheader_version = '0.99'
 
         self.robotname, self.ua = useragent.useragent(self.version)

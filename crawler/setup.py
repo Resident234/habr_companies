@@ -59,7 +59,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='habr-companies-crawler',
-    use_scm_version=True,
+    use_scm_version={'root': '..'},
     description='Habr companies article parser built on the habrcrawler framework',
     long_description=description,
     long_description_content_type='text/markdown',
