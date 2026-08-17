@@ -28,6 +28,9 @@ def test_robotscache():
 def test_saveload():
     tf = tempfile.NamedTemporaryFile(delete=False)
     name = tf.name
+    # NamedTemporaryFile keeps an open handle on Windows, which prevents
+    # os.unlink() from removing the file later in the test.
+    tf.close()
 
     c = {'Robots': {'RobotsCacheSize': 1, 'RobotsCacheTimeout': 1}}
     config.set_config(c)

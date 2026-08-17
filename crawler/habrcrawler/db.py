@@ -209,28 +209,38 @@ async def insert_article(article_id, title, stats_counter, label_id,
                          company_code, score_counter, bookmarks_counter,
                          comments_counter):
     '''
-    Insert one article row. Returns True if inserted, False if it already
-    existed (duplicate id).
+    Insert or update one article row.
+
+    For an existing id, crawler-owned fields are refreshed while action_* fields
+    are deliberately omitted from the UPDATE clause so that external workflow
+    state is preserved.
     '''
     pool = await init_pool()
     async with pool.acquire() as conn:
         async with conn.cursor() as cur:
-            try:
-                await cur.execute(
-                    'INSERT INTO articles '
-                    '(id, title, stats_counter, label, company, '
-                    ' score_counter, bookmarks_counter, comments_counter) '
-                    'VALUES (%s, %s, %s, %s, %s, %s, %s, %s)',
-                    (article_id, title, stats_counter, label_id,
-                     company_code, score_counter, bookmarks_counter,
-                     comments_counter))
+            await cur.execute(
+                'INSERT INTO articles '
+                '(id, title, stats_counter, label, company, '
+                ' score_counter, bookmarks_counter, comments_counter) '
+                'VALUES (%s, %s, %s, %s, %s, %s, %s, %s) '
+                'ON DUPLICATE KEY UPDATE '
+                'title = VALUES(title), '
+                'stats_counter = VALUES(stats_counter), '
+                'label = VALUES(label), '
+                'score_counter = VALUES(score_counter), '
+                'bookmarks_counter = VALUES(bookmarks_counter), '
+                'comments_counter = VALUES(comments_counter)',
+                (article_id, title, stats_counter, label_id,
+                 company_code, score_counter, bookmarks_counter,
+                 comments_counter))
+
+            # aiomysql exposes MySQL's affected-row count: 1 for insert,
+            # 2 for an update, and 0 when an update changes nothing.
+            if getattr(cur, 'rowcount', 1) == 1:
                 stats.stats_sum('articles inserted', 1)
-                return True
-            except Exception as e:
-                if 'Duplicate entry' in str(e):
-                    stats.stats_sum('articles duplicate skipped', 1)
-                    return False
-                raise
+            else:
+                stats.stats_sum('articles updated', 1)
+            return True
 
 
 async def link_article_hub(article_id, hub_code):

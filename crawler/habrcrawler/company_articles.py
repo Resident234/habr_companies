@@ -35,6 +35,10 @@ ARTICLES_URL_TEMPLATE = 'https://habr.com/ru/companies/{company}/articles/'
 
 # <article id="1026612" class="tm-articles-list__item ...">
 ARTICLE_ID_RE = re.compile(r'^\d+$')
+ARTICLE_URL_RE = re.compile(r'/ru/companies/[^/]+/articles/\d+')
+ARTICLE_URL_TEMPLATE = (
+    'https://habr.com/ru/companies/{company}/articles/{article_id}/'
+)
 
 
 def articles_page_url(template, company, page):
@@ -102,6 +106,25 @@ class HabrArticlesSeedGenerator:
         }
         self.crawler.add_url(1, ridealong)
 
+    def queue_article_page(self, company_code, article_id, article_url=None):
+        '''Enqueue one article detail page discovered on a list page.'''
+        if article_url is None:
+            template = config.read('Habr', 'ArticleUrlTemplate') or \
+                ARTICLE_URL_TEMPLATE
+            article_url = template.format(
+                company=company_code, article_id=article_id)
+
+        ridealong = {
+            'url': URL(article_url),
+            'priority': 1,
+            'retries_left': config.read('Crawl', 'MaxTries'),
+            'seed_host': 'habr.com',
+            'company_code': company_code,
+            'article_id': article_id,
+            'articles_detail_page': True,
+        }
+        self.crawler.add_url(1, ridealong)
+
     def maybe_top_up(self):
         '''
         Called periodically from the crawl loop. Nothing to do here:
@@ -122,6 +145,15 @@ def _extract_title(article):
         return strong.get_text(' ', strip=True)
     p = body.find('p')
     return p.get_text(' ', strip=True) if p else ''
+
+
+def _extract_article_url(article):
+    '''Return the canonical detail URL linked from an article preview.'''
+    link = article.find(
+        'a', href=lambda href: href and ARTICLE_URL_RE.search(href))
+    if link is None:
+        return None
+    return urljoin('https://habr.com', link.get('href', ''))
 
 
 def parse_articles_list_html(html):
@@ -147,7 +179,11 @@ def parse_articles_list_html(html):
             # not a full article snippet (ad block, pinned banner, etc.)
             continue
 
+        # The preview text is not the article title. The canonical title is
+        # read later from the h1 on the detail page. Keep the preview title
+        # only as a fallback for malformed list entries.
         title = _extract_title(article)
+        article_url = _extract_article_url(article)
 
         # views: <span class="tm-icon-counter__value" title="3256">3.3K</span>
         stats_counter = None
@@ -200,6 +236,7 @@ def parse_articles_list_html(html):
         articles.append({
             'id': article_id,
             'title': title,
+            'url': article_url,
             'stats_counter': stats_counter,
             'hubs': hubs,
             'score_counter': score_counter,
@@ -235,8 +272,32 @@ async def parse_and_save_articles(html, company_code, page, crawler=None):
                     company_code, page)
         return 0
 
+    queued = 0
     saved = 0
     for article in articles:
+        if crawler is not None:
+            generator = getattr(crawler, 'habr_generator', None)
+            if generator is not None and hasattr(generator, 'queue_article_page'):
+                generator.queue_article_page(
+                    company_code, article['id'], article.get('url'))
+            else:
+                template = config.read('Habr', 'ArticleUrlTemplate') or \
+                    ARTICLE_URL_TEMPLATE
+                detail_url = article.get('url') or template.format(
+                    company=company_code, article_id=article['id'])
+                crawler.add_url(1, {
+                    'url': URL(detail_url),
+                    'priority': 1,
+                    'retries_left': config.read('Crawl', 'MaxTries'),
+                    'seed_host': 'habr.com',
+                    'company_code': company_code,
+                    'article_id': article['id'],
+                    'articles_detail_page': True,
+                })
+            queued += 1
+            continue
+
+        # Keep the parser's standalone fallback for callers without a crawler.
         inserted = await db.insert_article(
             article_id=article['id'],
             title=article['title'][:255],
@@ -254,9 +315,11 @@ async def parse_and_save_articles(html, company_code, page, crawler=None):
                     hub['code'], hub['title'])
                 await db.link_article_hub(article['id'], hub_code)
 
+    stats.stats_sum('habr articles detail urls queued', queued)
     stats.stats_sum('habr articles saved', saved)
-    LOGGER.info('company %s page %d: %d articles found, %d saved',
-                company_code, page, len(articles), saved)
+    LOGGER.info(
+        'company %s page %d: %d articles found, %d detail urls queued, %d saved',
+        company_code, page, len(articles), queued, saved)
 
     # chain the next page: a full page means there may be more
     if crawler is not None:

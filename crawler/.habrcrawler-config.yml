@@ -12,7 +12,7 @@ Database:
 
 Habr:
   ArticlesMode: True
-  ArticlesPagesMode: False  # True = crawl company articles lists (paginated)
+  ArticlesPagesMode: True  # True = crawl company articles lists (paginated)
   ArticleIdStart: 1
   ArticleIdEnd: 10000000
   ArticleUrlTemplate: 'https://habr.com/ru/companies/{company}/articles/{article_id}/'

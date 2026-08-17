@@ -152,7 +152,7 @@ async def parse_and_save(html, url, company_code):
         label_code = await db.get_or_create_label(
             data['label']['code'] or '', data['label']['title'])
 
-        inserted = await db.insert_article(
+    inserted = await db.insert_article(
         article_id=data['id'],
         title=data['title'][:255],
         stats_counter=(data['stats_counter'] or '')[:255] or None,

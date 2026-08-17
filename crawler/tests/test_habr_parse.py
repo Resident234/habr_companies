@@ -58,3 +58,25 @@ def test_parse_article_html():
 
 def test_parse_non_article_returns_none():
     assert parse_article_html('<html><body><p>404</p></body></html>', URL) is None
+
+YEASTAR_URL = 'https://habr.com/ru/companies/oktell/articles/123456/'
+YEASTAR_TITLE = 'Плата компьютерной телефонии «Yeastar» для приема/передачи факсов'
+YEASTAR_DETAIL_HTML = f'''
+<html><body>
+  <article class="tm-article-presenter__content">
+    <h1 class="tm-title tm-title_h1" lang="ru">
+      <span>{YEASTAR_TITLE}</span>
+    </h1>
+    <div class="article-formatted-body">
+      <strong>Неправильный текст из preview списка статей</strong>
+    </div>
+  </article>
+</body></html>
+'''
+
+
+def test_parse_article_title_from_detail_page():
+    data = parse_article_html(YEASTAR_DETAIL_HTML, YEASTAR_URL)
+
+    assert data is not None
+    assert data['title'] == YEASTAR_TITLE
