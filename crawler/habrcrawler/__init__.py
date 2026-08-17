@@ -74,6 +74,9 @@ class Crawler:
         self.upgrade_insecure_requests = config.read('Crawl', 'UpgradeInsecureRequests')
         self.max_workers = int(config.read('Crawl', 'MaxWorkers'))
         self.workers = []
+        self.active_retries = 0
+        self._monitor_totals = {}
+        self._monitor_time = time.time()
 
         try:
             # this works for the installed package
@@ -375,6 +378,7 @@ class Crawler:
             self.scheduler.del_ridealong(surt)
             seeds.fail(ridealong, self, json_log)
             return
+        stats.stats_sum(stats_prefix+'retries requeued', 1)
         ridealong['retries_left'] = retries_left
         self.scheduler.set_ridealong(surt, ridealong)
         # increment random so that we don't immediately retry
@@ -537,6 +541,14 @@ class Crawler:
         try:
             while True:
                 work = await self.scheduler.get_work()
+                retrying = False
+                retry_ridealong = self.scheduler.ridealong.get(work[2])
+                if retry_ridealong:
+                    max_tries = int(config.read('Crawl', 'MaxTries') or 0)
+                    retries_left = retry_ridealong.get('retries_left')
+                    retrying = max_tries > 0 and retries_left is not None and retries_left < max_tries
+                if retrying:
+                    self.active_retries += 1
 
                 try:
                     await self.fetch_and_process(work)
@@ -548,6 +560,9 @@ class Crawler:
                     traceback.print_exc()
                     # falling through causes this work item to get marked done, and we continue
                     # note that this leaks the ridealong
+                finally:
+                    if retrying:
+                        self.active_retries -= 1
                 self.scheduler.work_done()
 
                 if self.stopping:
@@ -644,15 +659,40 @@ class Crawler:
             self.datalayer.load(f)
             stats.load(f)
 
+    def _monitor_rate(self, name, counters, elapsed):
+        current = 0
+        for counter in counters:
+            current += stats.stat_value(counter) or 0
+        previous = self._monitor_totals.get(name, current)
+        delta = max(current - previous, 0)
+        self._monitor_totals[name] = current
+        rate = delta * 60.0 / elapsed if elapsed > 0 else 0
+        stats.stats_set(name, rate)
+
     def minute(self):
         '''
         print interesting stuff, once a minute
         '''
-        if time.time() < self.next_minute:
+        now = time.time()
+        if now < self.next_minute:
             return
-
-        self.next_minute = time.time() + 60
+        self.next_minute = now + 60
+        elapsed = max(now - self._monitor_time, 0)
+        self._monitor_time = now
+        queue_size = self.scheduler.qsize()
+        ridealong_size = self.scheduler.ridealong_size()
         stats.stats_set('DNS cache size', self.resolver.size())
+        stats.stats_set('queue size', queue_size)
+        stats.stats_max('max queue size', queue_size)
+        stats.stats_set('ridealong size', ridealong_size)
+        stats.stats_set('active workers', len(self.workers))
+        stats.stats_set('active retries', self.active_retries)
+        stats.stats_set('active coroutines', sum(stats.coroutine_states.values()))
+        self._monitor_rate('articles per minute', ('articles inserted', 'articles updated'), elapsed)
+        self._monitor_rate('news per minute', ('news inserted',), elapsed)
+        self._monitor_rate('posts per minute', ('posts inserted',), elapsed)
+        self._monitor_rate('pages per minute', ('fetch URLs',), elapsed)
+        self._monitor_rate('client errors per minute', ('fetch ClientError',), elapsed)
         if resource is not None:
             ru = resource.getrusage(resource.RUSAGE_SELF)
             vmem = (ru[2])/1000000.  # gigabytes
@@ -660,7 +700,6 @@ class Crawler:
         stats.report()
         stats.coroutine_report()
         memory.print_summary(self.memory_crawler)
-
     def hour(self):
         '''Do something once per hour'''
         if time.time() < self.next_hour:

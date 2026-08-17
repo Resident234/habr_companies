@@ -165,6 +165,7 @@ async def fetch(url, session,
         # TooManyRedirects("0, message=''",) caused by too many robots.txt redirs 
         stats.stats_sum(stats_prefix+'fetch ClientError', 1)
         detailed_name = str(type(e).__name__)
+        stats.stats_sum(stats_prefix+'fetch error '+detailed_name, 1)
         last_exception = 'ClientError: ' + detailed_name + ': ' + str(e)
         body_bytes = b''.join(blocks)
         if len(body_bytes):
