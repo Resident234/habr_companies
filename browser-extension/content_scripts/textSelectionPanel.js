@@ -99,32 +99,21 @@ async function sendToAPI(endpoint, title) {
     const url = `${baseUrl}${endpoint}`;
 
     try {
-        const response = await new Promise((resolve, reject) => {
-            const port = chrome.runtime.connect({ name: 'fetch' });
-            let settled = false;
-
-            port.onMessage.addListener((msg) => {
-                settled = true;
-                port.disconnect();
-                resolve(msg);
-            });
-
-            port.onDisconnect.addListener(() => {
-                if (settled) return;
-                reject(new Error('Connection lost'));
-            });
-
-            port.postMessage({
-                type: 'FETCH_REQUEST',
-                url: url,
-                method: 'POST',
-                headers: {
-                    'X-API-Key': CONFIG.API_KEY,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ title })
-            });
+        const api = globalThis.browser ?? globalThis.chrome;
+        const response = await api.runtime.sendMessage({
+            type: 'FETCH_REQUEST',
+            url,
+            method: 'POST',
+            headers: {
+                'X-API-Key': CONFIG.API_KEY,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ title })
         });
+
+        if (!response) {
+            throw new Error('Background fetch returned no response');
+        }
 
         if (response.error) throw new Error(response.error);
         return { ok: response.ok, status: response.status, body: response.body };

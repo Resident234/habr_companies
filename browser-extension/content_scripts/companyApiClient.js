@@ -18,31 +18,12 @@ export class CompanyApiClient {
         console.log('[CompanyApiClient.sendCompany] Sending POST request via background...');
 
         try {
-            const response = await new Promise((resolve, reject) => {
-                const port = chrome.runtime.connect({ name: 'fetch' });
-                let settled = false;
-
-                port.onMessage.addListener((msg) => {
-                    settled = true;
-                    port.disconnect();
-                    resolve(msg);
-                });
-
-                port.onDisconnect.addListener(() => {
-                    if (settled) return;
-                    const error = chrome.runtime.lastError;
-                    reject(new Error(error?.message || 'Background port closed unexpectedly'));
-                });
-
-                port.postMessage({
-                    type: 'FETCH_REQUEST',
-                    url: url,
-                    method: 'POST',
-                    headers: {
+            const response = await this._fetch(url, {
+                method: 'POST',
+                headers: {
                         'X-API-Key': CONFIG.API_KEY,
                         'Content-Type': 'application/json'
-                    }
-                });
+                },
             });
 
             console.log('[CompanyApiClient.sendCompany] Response status:', response.status);
@@ -76,31 +57,12 @@ export class CompanyApiClient {
         console.log('[CompanyApiClient.getStatuses] Full request URL:', url);
 
         try {
-            const response = await new Promise((resolve, reject) => {
-                const port = chrome.runtime.connect({ name: 'fetch' });
-                let settled = false;
-
-                port.onMessage.addListener((msg) => {
-                    settled = true;
-                    port.disconnect();
-                    resolve(msg);
-                });
-
-                port.onDisconnect.addListener(() => {
-                    if (settled) return;
-                    const error = chrome.runtime.lastError;
-                    reject(new Error(error?.message || 'Background port closed unexpectedly'));
-                });
-
-                port.postMessage({
-                    type: 'FETCH_REQUEST',
-                    url: url,
-                    method: 'GET',
-                    headers: {
+            const response = await this._fetch(url, {
+                method: 'GET',
+                headers: {
                         'X-API-Key': CONFIG.API_KEY,
                         'Content-Type': 'application/json'
-                    }
-                });
+                },
             });
 
             console.log('[CompanyApiClient.getStatuses] Response status:', response.status);
@@ -128,31 +90,12 @@ export class CompanyApiClient {
         console.log('[CompanyApiClient.getArticleStatuses] Full request URL:', url);
 
         try {
-            const response = await new Promise((resolve, reject) => {
-                const port = chrome.runtime.connect({ name: 'fetch' });
-                let settled = false;
-
-                port.onMessage.addListener((msg) => {
-                    settled = true;
-                    port.disconnect();
-                    resolve(msg);
-                });
-
-                port.onDisconnect.addListener(() => {
-                    if (settled) return;
-                    const error = chrome.runtime.lastError;
-                    reject(new Error(error?.message || 'Background port closed unexpectedly'));
-                });
-
-                port.postMessage({
-                    type: 'FETCH_REQUEST',
-                    url: url,
-                    method: 'GET',
-                    headers: {
+            const response = await this._fetch(url, {
+                method: 'GET',
+                headers: {
                         'X-API-Key': CONFIG.API_KEY,
                         'Content-Type': 'application/json'
-                    }
-                });
+                },
             });
 
             console.log('[CompanyApiClient.getArticleStatuses] Response status:', response.status);
@@ -180,31 +123,12 @@ export class CompanyApiClient {
         console.log('[CompanyApiClient.getNewsStatuses] Full request URL:', url);
 
         try {
-            const response = await new Promise((resolve, reject) => {
-                const port = chrome.runtime.connect({ name: 'fetch' });
-                let settled = false;
-
-                port.onMessage.addListener((msg) => {
-                    settled = true;
-                    port.disconnect();
-                    resolve(msg);
-                });
-
-                port.onDisconnect.addListener(() => {
-                    if (settled) return;
-                    const error = chrome.runtime.lastError;
-                    reject(new Error(error?.message || 'Background port closed unexpectedly'));
-                });
-
-                port.postMessage({
-                    type: 'FETCH_REQUEST',
-                    url: url,
-                    method: 'GET',
-                    headers: {
+            const response = await this._fetch(url, {
+                method: 'GET',
+                headers: {
                         'X-API-Key': CONFIG.API_KEY,
                         'Content-Type': 'application/json'
-                    }
-                });
+                },
             });
 
             console.log('[CompanyApiClient.getNewsStatuses] Response status:', response.status);
@@ -238,31 +162,12 @@ export class CompanyApiClient {
         console.log('[CompanyApiClient.getPostsStatuses] Full request URL:', url);
 
         try {
-            const response = await new Promise((resolve, reject) => {
-                const port = chrome.runtime.connect({ name: 'fetch' });
-                let settled = false;
-
-                port.onMessage.addListener((msg) => {
-                    settled = true;
-                    port.disconnect();
-                    resolve(msg);
-                });
-
-                port.onDisconnect.addListener(() => {
-                    if (settled) return;
-                    const error = chrome.runtime.lastError;
-                    reject(new Error(error?.message || 'Background port closed unexpectedly'));
-                });
-
-                port.postMessage({
-                    type: 'FETCH_REQUEST',
-                    url: url,
-                    method: 'GET',
-                    headers: {
+            const response = await this._fetch(url, {
+                method: 'GET',
+                headers: {
                         'X-API-Key': CONFIG.API_KEY,
                         'Content-Type': 'application/json'
-                    }
-                });
+                },
             });
 
             console.log('[CompanyApiClient.getPostsStatuses] Response status:', response.status);
@@ -282,6 +187,26 @@ export class CompanyApiClient {
         }
     }
 
+    async _fetch(url, { method = 'GET', headers = {}, body } = {}) {
+        const api = globalThis.browser ?? globalThis.chrome;
+        if (!api?.runtime?.sendMessage) {
+            throw new Error('Extension runtime messaging API is unavailable');
+        }
+
+        const request = {
+            type: 'FETCH_REQUEST',
+            url,
+            method,
+            headers
+        };
+        if (body !== undefined) request.body = body;
+
+        const response = await api.runtime.sendMessage(request);
+        if (!response) {
+            throw new Error('Background fetch returned no response');
+        }
+        return response;
+    }
     async _getBaseUrl() {
         const prefs = await this._storage.get();
         return (prefs && prefs.base_url) ? prefs.base_url : CONFIG.DEFAULT_BASE_URL;
@@ -298,31 +223,12 @@ export class CompanyApiClient {
         console.log('[CompanyApiClient._patchStatus] Full request URL:', url);
 
         try {
-            const response = await new Promise((resolve, reject) => {
-                const port = chrome.runtime.connect({ name: 'fetch' });
-                let settled = false;
-
-                port.onMessage.addListener((msg) => {
-                    settled = true;
-                    port.disconnect();
-                    resolve(msg);
-                });
-
-                port.onDisconnect.addListener(() => {
-                    if (settled) return;
-                    const error = chrome.runtime.lastError;
-                    reject(new Error(error?.message || 'Background port closed unexpectedly'));
-                });
-
-                port.postMessage({
-                    type: 'FETCH_REQUEST',
-                    url: url,
-                    method: 'PATCH',
-                    headers: {
+            const response = await this._fetch(url, {
+                method: 'PATCH',
+                headers: {
                         'X-API-Key': CONFIG.API_KEY,
                         'Content-Type': 'application/json'
-                    }
-                });
+                },
             });
 
             console.log('[CompanyApiClient._patchStatus] Response status:', response.status);
@@ -384,32 +290,13 @@ export class CompanyApiClient {
         const url = `${baseUrl}/comment/add`;
 
         try {
-            const response = await new Promise((resolve, reject) => {
-                const port = chrome.runtime.connect({ name: 'fetch' });
-                let settled = false;
-
-                port.onMessage.addListener((msg) => {
-                    settled = true;
-                    port.disconnect();
-                    resolve(msg);
-                });
-
-                port.onDisconnect.addListener(() => {
-                    if (settled) return;
-                    const error = chrome.runtime.lastError;
-                    reject(new Error(error?.message || 'Background port closed unexpectedly'));
-                });
-
-                port.postMessage({
-                    type: 'FETCH_REQUEST',
-                    url: url,
-                    method: 'POST',
-                    headers: {
+            const response = await this._fetch(url, {
+                method: 'POST',
+                headers: {
                         'X-API-Key': CONFIG.API_KEY,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(data)
-                });
+                body: JSON.stringify(data)
             });
 
             if (response.error) throw new Error(response.error);
@@ -441,30 +328,11 @@ export class CompanyApiClient {
         const url = `${baseUrl}/comment/${commentId}`;
 
         try {
-            const response = await new Promise((resolve, reject) => {
-                const port = chrome.runtime.connect({ name: 'fetch' });
-                let settled = false;
-
-                port.onMessage.addListener((msg) => {
-                    settled = true;
-                    port.disconnect();
-                    resolve(msg);
-                });
-
-                port.onDisconnect.addListener(() => {
-                    if (settled) return;
-                    const error = chrome.runtime.lastError;
-                    reject(new Error(error?.message || 'Background port closed unexpectedly'));
-                });
-
-                port.postMessage({
-                    type: 'FETCH_REQUEST',
-                    url: url,
-                    method: 'DELETE',
-                    headers: {
+            const response = await this._fetch(url, {
+                method: 'DELETE',
+                headers: {
                         'X-API-Key': CONFIG.API_KEY
-                    }
-                });
+                },
             });
 
             if (response.error) throw new Error(response.error);
