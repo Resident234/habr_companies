@@ -78,7 +78,7 @@ def test_insert_article_upsert_updates_crawler_fields_only(
     for column in (
             'title', 'stats_counter', 'label', 'score_counter',
             'bookmarks_counter', 'comments_counter'):
-        assert '{} = VALUES({})'.format(column, column) in cursor.query
+        assert '{} = new.{}'.format(column, column) in cursor.query
     for column in (
             'action_dev', 'action_post', 'action_comment',
             'action_industry', 'action_company'):
@@ -87,3 +87,16 @@ def test_insert_article_upsert_updates_crawler_fields_only(
         123, 'Correct detail title', '3700', 'reportage', 'oktell',
         24, 2, 24)
     assert stats_calls == [(expected_stat, 1)]
+
+
+def test_link_article_hub_uses_warning_free_idempotent_insert(monkeypatch):
+    cursor = FakeCursor(1)
+    pool = FakePool(cursor)
+    async def fake_init_pool():
+        return pool
+    monkeypatch.setattr(db, 'init_pool', fake_init_pool)
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(db.link_article_hub(946376, 'fix_price'))
+    assert 'INSERT IGNORE' not in cursor.query
+    assert 'ON DUPLICATE KEY UPDATE article_id = article_id' in cursor.query
+    assert cursor.params == (946376, 'fix_price')

@@ -1,4 +1,4 @@
-﻿# Habr Companies Article Parser
+# Habr Companies Article Parser
 
 Парсер статей компаний с Хабра, построенный на асинхронном
 asyncio-краулере.
@@ -605,3 +605,9 @@ Rate limit `Crawl.MaxHostQPS` (по умолчанию 2 rps на `habr.com`) п
 
 Apache 2.0
 Source launch requires a full Git checkout with the parent .git directory.
+
+## Network and database retry behavior
+
+Transient `aiohttp` failures such as `ServerDisconnectedError` are retryable. The crawler requeues the affected URL while `retries_left` remains positive; a `we failed working on ...` line describes one failed attempt and is not, by itself, proof that the URL was permanently lost. The final crawler log records `retries_left: 0` when all attempts are exhausted.
+
+Article hub links are stored idempotently with `ON DUPLICATE KEY UPDATE`, so rerunning a page does not create duplicate-key warnings. Article upserts use the MySQL row-alias form (`new.column`) instead of the deprecated `VALUES(column)` form.

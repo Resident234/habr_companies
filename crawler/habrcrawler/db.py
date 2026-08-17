@@ -222,14 +222,14 @@ async def insert_article(article_id, title, stats_counter, label_id,
                 'INSERT INTO articles '
                 '(id, title, stats_counter, label, company, '
                 ' score_counter, bookmarks_counter, comments_counter) '
-                'VALUES (%s, %s, %s, %s, %s, %s, %s, %s) '
+                'VALUES (%s, %s, %s, %s, %s, %s, %s, %s) AS new '
                 'ON DUPLICATE KEY UPDATE '
-                'title = VALUES(title), '
-                'stats_counter = VALUES(stats_counter), '
-                'label = VALUES(label), '
-                'score_counter = VALUES(score_counter), '
-                'bookmarks_counter = VALUES(bookmarks_counter), '
-                'comments_counter = VALUES(comments_counter)',
+                'title = new.title, '
+                'stats_counter = new.stats_counter, '
+                'label = new.label, '
+                'score_counter = new.score_counter, '
+                'bookmarks_counter = new.bookmarks_counter, '
+                'comments_counter = new.comments_counter',
                 (article_id, title, stats_counter, label_id,
                  company_code, score_counter, bookmarks_counter,
                  comments_counter))
@@ -248,11 +248,10 @@ async def link_article_hub(article_id, hub_code):
     async with pool.acquire() as conn:
         async with conn.cursor() as cur:
             await cur.execute(
-                'INSERT IGNORE INTO article_hubs (article_id, hub_code) '
-                'VALUES (%s, %s)',
+                'INSERT INTO article_hubs (article_id, hub_code) '
+                'VALUES (%s, %s) '
+                'ON DUPLICATE KEY UPDATE article_id = article_id',
                 (article_id, hub_code))
-
-
 async def insert_post(post_id, title, stats_counter, company_code,
                       score_counter, bookmarks_counter, comments_counter):
     '''
