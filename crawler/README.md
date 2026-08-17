@@ -81,9 +81,9 @@ Habr:
   SeedBatchSize: 20000   # сколько URL держать в очереди на компанию
 
 Crawl:
-  MaxWorkers: 10         # параллельных запросов
+  MaxWorkers: 4         # параллельных запросов
   MaxHostQPS: 2          # запросов в секунду на хост (вежливость)
-  MaxTries: 3
+  MaxTries: 6
 ```
 
 Описание параметров параллелизма:
@@ -91,7 +91,7 @@ Crawl:
 | Параметр         | Где используется | По умолчанию | Описание |
 |------------------|------------------|--------------|----------|
 | `Crawl.MaxWorkers`  | `habrcrawler/__init__.py` | 10 | Число asyncio-воркеров, параллельно выполняющих полный цикл (DNS, robots, HTTP, парсинг, запись в БД) |
-| `Crawl.MaxHostQPS`  | `habrcrawler/scheduler.py` | 10 | Максимум запросов в секунду на один хост (вежливость); планировщик сам расставляет задержки между запросами |
+| `Crawl.MaxHostQPS`  | `habrcrawler/scheduler.py` | 2 | Максимум запросов в секунду на один хост (вежливость); планировщик сам расставляет задержки между запросами |
 | `Database.MinPoolSize` | `habrcrawler/db.py` | 1 | Минимальный размер пула соединений aiomysql |
 | `Database.MaxPoolSize` | `habrcrawler/db.py` | 10 | Максимальный размер пула соединений aiomysql; должен быть `>= MinPoolSize` |
 
@@ -124,7 +124,7 @@ python scripts/crawl.py --configfile .habrcrawler-config.yml
 
 #### `INFO:habrcrawler.seeds:Received a final failure for seed url ...`
 
-Это означает, что краулер **окончательно отказался от попыток** скачать эту конкретную статью после исчерпания всех ретраев (по умолчанию `MaxTries: 3`). Причины:
+Это означает, что краулер **окончательно отказался от попыток** скачать эту конкретную статью после исчерпания всех ретраев (по умолчанию `MaxTries: 6`). Причины:
 - **HTTP 4xx/5xx ошибки**: страница не найдена (404), доступ запрещён (403), сервер недоступен (502/503/504)
 - **Таймауты сети** или ошибки DNS
 - **Блокировка бота** сайтом
@@ -611,3 +611,18 @@ Source launch requires a full Git checkout with the parent .git directory.
 Transient `aiohttp` failures such as `ServerDisconnectedError` are retryable. The crawler requeues the affected URL while `retries_left` remains positive; a `we failed working on ...` line describes one failed attempt and is not, by itself, proof that the URL was permanently lost. The final crawler log records `retries_left: 0` when all attempts are exhausted.
 
 Article hub links are stored idempotently with `ON DUPLICATE KEY UPDATE`, so rerunning a page does not create duplicate-key warnings. Article upserts use the MySQL row-alias form (`new.column`) instead of the deprecated `VALUES(column)` form.
+## Recommended Crawl profile
+
+The current Windows configuration uses a conservative Habr request profile:
+
+```yaml
+Crawl:
+  MaxTries: 6
+  ConnectTimeout: 20.
+  PageTimeout: 45.
+  RetryTimeout: 5
+  MaxWorkers: 4
+  MaxHostQPS: 2
+```
+
+This profile reduces concurrent requests and host rate while allowing transient `ServerDisconnectedError` failures to be retried. `RetryTimeout` is retained as a configuration value; the current retry queue does not yet enforce a fixed sleep before requeueing.

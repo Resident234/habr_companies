@@ -40,11 +40,17 @@ Habr:
   ProfileUrlTemplate: 'https://habr.com/ru/companies/{company}/profile/'
 
 Crawl:
-  MaxWorkers: 10
+  MaxDepth: 3
+  MaxTries: 6
+  ConnectTimeout: 20.
+  PageTimeout: 45.
+  RetryTimeout: 5
+  MaxWorkers: 4
   MaxHostQPS: 2
-  MaxTries: 3
-  PageTimeout: 30.
-
+  MaxPageSize: 1000000
+  PreventCompression: False
+  UpgradeInsecureRequests: 1
+  QueueEmbeds: False
 UserAgent:
   Style: laptopplus
   MyPrefix: habrcompanies
