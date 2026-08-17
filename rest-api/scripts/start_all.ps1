@@ -7,6 +7,15 @@ param(
 $ErrorActionPreference = "Stop"
 $Host.UI.RawUI.WindowTitle = "rest-api + ngrok"
 
+# Prevent concurrent startup scripts from racing and creating duplicate ngrok endpoints.
+$startMutex = [System.Threading.Mutex]::new($false, 'Local\HabrCompanies.RestApiNgrok.StartAll')
+try { $startMutexAcquired = $startMutex.WaitOne(0) } catch [System.Threading.AbandonedMutexException] { $startMutexAcquired = $true }
+if (-not $startMutexAcquired) {
+    Write-Error 'Another start_all.ps1 instance is already running; refusing to start a second REST API/ngrok pair.'
+    $startMutex.Dispose()
+    exit 1
+}
+
 # - 1. Resolve paths -
 $ScriptDir  = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectDir = Split-Path -Parent $ScriptDir

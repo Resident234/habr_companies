@@ -2,6 +2,15 @@
 $ErrorActionPreference = "SilentlyContinue"
 $LogFile = Join-Path $PSScriptRoot "watchdog.log"
 $CheckInterval = 5
+
+# Ensure only one watchdog supervises the REST API/ngrok pair.
+$watchdogMutex = [System.Threading.Mutex]::new($false, 'Local\HabrCompanies.RestApiNgrok.Watchdog')
+try { $watchdogMutexAcquired = $watchdogMutex.WaitOne(0) } catch [System.Threading.AbandonedMutexException] { $watchdogMutexAcquired = $true }
+if (-not $watchdogMutexAcquired) {
+    Write-Output 'Another watchdog.ps1 instance is already running; exiting.'
+    $watchdogMutex.Dispose()
+    exit 0
+}
 . (Join-Path $PSScriptRoot 'trim_log.ps1')
 Trim-LogLines $LogFile 1000
 
