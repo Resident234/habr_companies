@@ -100,3 +100,25 @@ def test_link_article_hub_uses_warning_free_idempotent_insert(monkeypatch):
     assert 'INSERT IGNORE' not in cursor.query
     assert 'ON DUPLICATE KEY UPDATE article_id = article_id' in cursor.query
     assert cursor.params == (946376, 'fix_price')
+@pytest.mark.parametrize(
+    'function, args, no_op_column',
+    [
+        (db.link_post_hub, (946376, 'fix_price'), 'post_id = post_id'),
+        (db.link_news_hub, (946376, 'fix_price'), 'news_id = news_id'),
+        (db.link_company_category, ('neoflex', 'fintech'),
+         'company_code = company_code'),
+    ],
+)
+def test_link_tables_use_warning_free_idempotent_insert(
+        monkeypatch, function, args, no_op_column):
+    cursor = FakeCursor(1)
+    pool = FakePool(cursor)
+    async def fake_init_pool():
+        return pool
+    monkeypatch.setattr(db, 'init_pool', fake_init_pool)
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(function(*args))
+    assert 'INSERT IGNORE' not in cursor.query
+    assert 'ON DUPLICATE KEY UPDATE' in cursor.query
+    assert no_op_column in cursor.query
+    assert cursor.params == args

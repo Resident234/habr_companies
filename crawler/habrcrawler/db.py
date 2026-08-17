@@ -283,8 +283,9 @@ async def link_post_hub(post_id, hub_code):
     async with pool.acquire() as conn:
         async with conn.cursor() as cur:
             await cur.execute(
-                'INSERT IGNORE INTO post_hubs (post_id, hub_code) '
-                'VALUES (%s, %s)',
+                'INSERT INTO post_hubs (post_id, hub_code) '
+                'VALUES (%s, %s) '
+                'ON DUPLICATE KEY UPDATE post_id = post_id',
                 (post_id, hub_code))
 
 
@@ -319,8 +320,9 @@ async def link_news_hub(news_id, hub_code):
     async with pool.acquire() as conn:
         async with conn.cursor() as cur:
             await cur.execute(
-                'INSERT IGNORE INTO news_hubs (news_id, hub_code) '
-                'VALUES (%s, %s)',
+                'INSERT INTO news_hubs (news_id, hub_code) '
+                'VALUES (%s, %s) '
+                'ON DUPLICATE KEY UPDATE news_id = news_id',
                 (news_id, hub_code))
 
 
@@ -436,6 +438,7 @@ async def link_company_category(company_code, category_code):
     async with pool.acquire() as conn:
         async with conn.cursor() as cur:
             await cur.execute(
-                'INSERT IGNORE INTO company_categories (company_code, category_code) '
-                'VALUES (%s, %s)',
+                'INSERT INTO company_categories (company_code, category_code) '
+                'VALUES (%s, %s) '
+                'ON DUPLICATE KEY UPDATE company_code = company_code',
                 (company_code, category_code))
