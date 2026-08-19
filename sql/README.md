@@ -98,7 +98,7 @@ collation `utf8mb4_unicode_ci`; колонки `action_*` и `statuses.code` —
 | Таблица    | Поля                        | Запись |
 |------------|-----------------------------|--------|
 | `category` | `code` PK, `title` NOT NULL | Отрасли компаний. |
-| `hubs`     | `code` PK, `title` NOT NULL | Хабы Хабра. |
+| `hubs`     | `code` PK, `title` NOT NULL | Хабы Хабра. Завершающий маркер `*` не хранится; существующие строки очищаются `normalize_hub_titles.sql`. |
 | `labels`   | `code` PK, `title` NOT NULL | Метки статей. |
 | `statuses` | `code` PK, `title` NOT NULL | Статусы `action_*` (см. ниже). |
 
