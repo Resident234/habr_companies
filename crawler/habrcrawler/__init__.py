@@ -368,7 +368,7 @@ class Crawler:
         await db.close_pool()
 
 
-    def _retry_if_able(self, work, ridealong, json_log, stats_prefix=''):
+    async def _retry_if_able(self, work, ridealong, json_log, stats_prefix=''):
         priority, rand, surt = work
         retries_left = ridealong.get('retries_left', 0) - 1
         if json_log:
@@ -376,6 +376,7 @@ class Crawler:
         if retries_left <= 0:
             stats.stats_sum(stats_prefix+'retries completely exhausted', 1)
             self.scheduler.del_ridealong(surt)
+            await self._save_habr_code_only_after_final_failure(ridealong, json_log)
             seeds.fail(ridealong, self, json_log)
             return
         stats.stats_sum(stats_prefix+'retries requeued', 1)
@@ -387,6 +388,29 @@ class Crawler:
         ridealong['priority'] = priority
         self.scheduler.requeue_work((priority, rand, surt))
         return
+
+    async def _save_habr_code_only_after_final_failure(self, ridealong, json_log):
+        '''Persist only the discovered content id after detail retries fail.'''
+        if ridealong.get('company_code') is None:
+            return
+        handlers = (
+            ('article_id', db.insert_article_code_only, 'habr article'),
+            ('post_id', db.insert_post_code_only, 'habr post'),
+            ('news_id', db.insert_news_code_only, 'habr news'),
+        )
+        for id_key, insert_code_only, label in handlers:
+            content_id = ridealong.get(id_key)
+            if content_id is None:
+                continue
+            try:
+                inserted = await insert_code_only(content_id)
+                json_log[label.replace(' ', '_') + '_code_only'] = bool(inserted)
+                stats.stats_sum(label + ' code-only fallback', 1)
+            except Exception as e:
+                stats.stats_sum(label + ' code-only fallback errors', 1)
+                LOGGER.warning(
+                    'failed to save code-only %s %s: %s', label, content_id, e)
+            return
 
     async def fetch_and_process(self, work):
         '''
@@ -423,7 +447,7 @@ class Crawler:
                 json_log['ip'] = dns.entry_to_as(dns_entry)
             else:
                 # fail out: we don't want to do DNS in the robots or page fetch
-                self._retry_if_able(work, ridealong, json_log)
+                await self._retry_if_able(work, ridealong, json_log)
                 json_log['fail'] = 'no dns info'
                 if self.crawllogfd:
                     print(json.dumps(json_log, sort_keys=True), file=self.crawllogfd)
@@ -441,7 +465,7 @@ class Crawler:
                 json_log['fail'] = 'no robots'
             else:
                 json_log['fail'] = 'robots denied'
-            self._retry_if_able(work, ridealong, json_log, stats_prefix='robots ')
+            await self._retry_if_able(work, ridealong, json_log, stats_prefix='robots ')
             if self.crawllogfd:
                 print(json.dumps(json_log, sort_keys=True), file=self.crawllogfd)
             return
@@ -463,7 +487,7 @@ class Crawler:
             stats.stats_sum('fetch ip is from dns', 1)
 
         if post_fetch.should_retry(f):
-            self._retry_if_able(work, ridealong, json_log)
+            await self._retry_if_able(work, ridealong, json_log)
             if self.crawllogfd:
                 print(json.dumps(json_log, sort_keys=True), file=self.crawllogfd)
             return

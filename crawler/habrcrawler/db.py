@@ -243,6 +243,37 @@ async def insert_article(article_id, title, stats_counter, label_id,
             return True
 
 
+async def _insert_code_only(table, code, stats_name):
+    '''Insert only the content code and skip an existing row.'''
+    pool = await init_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            # title is required by the legacy schema; an empty value marks a
+            # row whose detail page could not be fetched. All other fields keep
+            # their database defaults or NULL values.
+            await cur.execute(
+                'INSERT INTO {} (id, title) VALUES (%s, %s) '
+                'ON DUPLICATE KEY UPDATE id = id'.format(table),
+                (code, ''))
+            if getattr(cur, 'rowcount', 1) == 1:
+                stats.stats_sum(stats_name + ' inserted', 1)
+                return True
+            stats.stats_sum(stats_name + ' duplicate skipped', 1)
+            return False
+
+
+async def insert_article_code_only(article_id):
+    return await _insert_code_only('articles', article_id, 'articles code-only')
+
+
+async def insert_post_code_only(post_id):
+    return await _insert_code_only('posts', post_id, 'posts code-only')
+
+
+async def insert_news_code_only(news_id):
+    return await _insert_code_only('news', news_id, 'news code-only')
+
+
 async def link_article_hub(article_id, hub_code):
     pool = await init_pool()
     async with pool.acquire() as conn:

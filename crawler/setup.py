@@ -2,12 +2,12 @@
 
 from os import path
 
-from setuptools import setup
+from setuptools import find_packages, setup
 
 
-packages = [
-    'crawler/setup.py',
-]
+packages = find_packages(
+    include=['habrcrawler', 'habrcrawler.*'],
+)
 
 requires = [
     'uvloop',

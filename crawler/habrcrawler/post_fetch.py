@@ -302,6 +302,15 @@ async def post_2xx(f, url, ridealong, priority, host_geoip, json_log, crawler):
                 except Exception as e:
                     stats.stats_sum('habr article save errors', 1)
                     LOGGER.warning('failed to save article %s: %s', url.url, e)
+            elif ridealong.get('post_id') is not None:
+                # Standalone company post detail page.
+                try:
+                    saved = await habr_post_parse.parse_and_save_post(
+                        body, url.url, company_code)
+                    json_log['habr_post_saved'] = bool(saved)
+                except Exception as e:
+                    stats.stats_sum('habr post save errors', 1)
+                    LOGGER.warning('failed to save post %s: %s', url.url, e)
             elif ridealong.get('news_page'):
                 # Company news list page: extract news, chain next page
                 try:

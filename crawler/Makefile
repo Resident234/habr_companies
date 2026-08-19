@@ -24,4 +24,4 @@ test_coverage: clean_coverage
 	coverage report
 
 install:
-	python ./setup.py install
+	python -m pip install -e .

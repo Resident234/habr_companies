@@ -63,11 +63,11 @@ def test_retry_requeue_records_counter(monkeypatch):
     name = 'retries requeued'
     before = stats.stat_value(name) or 0
 
-    crawler._retry_if_able(
+    run(crawler._retry_if_able(
         (1, 0.0, 'http://example.com/'),
         {'retries_left': 2},
         {},
-    )
+    ))
 
     assert stats.stat_value(name) == before + 1
     assert crawler.scheduler.requeued is not None

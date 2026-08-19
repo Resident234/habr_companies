@@ -122,3 +122,69 @@ def test_link_tables_use_warning_free_idempotent_insert(
     assert 'ON DUPLICATE KEY UPDATE' in cursor.query
     assert no_op_column in cursor.query
     assert cursor.params == args
+
+
+@pytest.mark.parametrize(
+    'function, table, code',
+    [
+        (db.insert_article_code_only, 'articles', 101),
+        (db.insert_post_code_only, 'posts', 102),
+        (db.insert_news_code_only, 'news', 103),
+    ],
+)
+def test_code_only_insert_uses_idempotent_insert(monkeypatch, function, table, code):
+    cursor = FakeCursor(1)
+    pool = FakePool(cursor)
+
+    async def fake_init_pool():
+        return pool
+
+    monkeypatch.setattr(db, 'init_pool', fake_init_pool)
+    monkeypatch.setattr(db.stats, 'stats_sum', lambda name, value: None)
+
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(function(code))
+
+    assert result is True
+    assert 'INSERT INTO {}'.format(table) in cursor.query
+    assert '(id, title)' in cursor.query
+    assert 'ON DUPLICATE KEY UPDATE id = id' in cursor.query
+    assert cursor.params == (code, '')
+
+
+@pytest.mark.parametrize(
+    'function',
+    [db.insert_article_code_only, db.insert_post_code_only,
+     db.insert_news_code_only],
+)
+def test_code_only_insert_returns_false_for_existing_row(monkeypatch, function):
+    cursor = FakeCursor(0)
+    pool = FakePool(cursor)
+
+    async def fake_init_pool():
+        return pool
+
+    monkeypatch.setattr(db, 'init_pool', fake_init_pool)
+    monkeypatch.setattr(db.stats, 'stats_sum', lambda name, value: None)
+
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(function(101))
+
+    assert result is False
+    assert cursor.params == (101, '')
+
+
+@pytest.mark.parametrize(
+    'flag, parser_name',
+    [('post_id', 'parse_and_save_post')],
+)
+def test_post_detail_parser_is_routed(monkeypatch, flag, parser_name):
+    # Kept as a small source-level contract test in the DB test module only
+    # because the full HTTP response fixture is expensive to construct here.
+    import inspect
+    import habrcrawler.post_fetch as post_fetch
+
+    source = inspect.getsource(post_fetch.post_2xx)
+    assert "ridealong.get('post_id') is not None" in source
+    assert parser_name in source
+    assert flag in source
