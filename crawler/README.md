@@ -73,7 +73,7 @@ Habr:
   NewsIdStart: 1
   NewsIdEnd: 10000000
   # Новые режимы пагинации (взаимоисключающие, проверяются сверху вниз):
-  ArticlesMode: False       # True = собирать статьи через пагинацию /companies/{code}/articles/
+  ArticlesMode: False       # True = перебор статей по числовому диапазону ID
   ArticlesUrlTemplate: 'https://habr.com/ru/companies/{company}/articles/'
   NewsPagesMode: False      # True = собирать новости через пагинацию /companies/{code}/news/
   NewsPagesUrlTemplate: 'https://habr.com/ru/companies/{company}/news/'
@@ -409,9 +409,9 @@ preloaded-state JSON (запись с `publicationType == "post"`), а счёт�
      прогресса через `GREATEST(...)`
 
 4. **`habrcrawler/__init__.py`** — поддержка режима `PostPagesMode`:
-   при `Habr.Enabled=True` и `Habr.PostPagesMode=True` используется
-   генератор постов; прогресс `last_processed_post_id` обновляется
-   после финального исхода обработки каждого URL с `post_id`
+   при `Habr.PostPagesMode=True` используется генератор постов независимо от
+   `ArticlesMode`; прогресс `last_processed_post_id` обновляется после
+   финального исхода обработки каждого URL с `post_id`
 
 5. **`habrcrawler/post_fetch.py`** — обработка страниц постов: при
    `post_id` в ridealong вызывается парсер постов вместо парсера
@@ -472,7 +472,9 @@ ALTER TABLE companies
 python -m pytest tests/test_habr_parse.py tests/test_habr_posts_parse.py tests/test_habr_news_parse.py -v
 ```
 
-## Новые режимы пагинации (ArticlesPagesMode / NewsPagesMode)
+## Режимы Habr и пагинация
+
+Каждый флаг режима Habr является **самостоятельным переключателем**. `ArticlesMode` больше не является общим разрешением для запуска постов, новостей, категорий, ссылок или баннеров. Для запуска постраничного парсера постов достаточно `PostPagesMode: True` при `ArticlesMode: False`; аналогично `NewsPagesMode`, `ArticlesPagesMode`, `CategoriesMode`, `LinksMode` и `BannersMode` работают независимо.
 
 Начиная с текущей версии поддерживаются режимы сбора данных с постраничной пагинацией вместо перебора по ID. Для статей важно различать два режима: `ArticlesMode` — старый перебор детальных страниц по диапазону числовых ID, а `ArticlesPagesMode` — обход страниц списка статей компании.
 
@@ -483,7 +485,7 @@ python -m pytest tests/test_habr_parse.py tests/test_habr_posts_parse.py tests/t
 - **Что сохраняется**: поля статьи в `articles` и связи с хабами в `article_hubs`.
 
 ### ArticlesPagesMode
-- **Включение**: одновременно `Habr.ArticlesMode: True` и `Habr.ArticlesPagesMode: True`. В текущей логике `ArticlesMode` является общим переключателем Habr-обработки, поэтому для постраничного режима должны быть включены оба флага.
+- **Включение**: `Habr.ArticlesPagesMode: True`. `ArticlesMode` для этого режима не требуется.
 - **URL шаблон списка**: `Habr.ArticlesUrlTemplate` (по умолчанию `https://habr.com/ru/companies/{company}/articles/`); для страниц 2 и далее автоматически используется путь `/page{N}/`.
 - **Принцип работы**: краулер ставит в очередь страницы списка статей компании (`page=1, 2, 3...`), извлекает из preview-блоков идентификаторы и ссылки статей, а затем ставит в очередь детальную страницу каждой найденной статьи. Следующая страница списка ставится в очередь, пока текущая страница содержит статьи; пустая страница завершает пагинацию.
 - **Источник заголовка**: итоговый `articles.title` берётся с детальной страницы из `h1.tm-title.tm-title_h1`. Заголовок из preview-блока страницы списка не используется для финального сохранения при работе crawler.
@@ -491,20 +493,22 @@ python -m pytest tests/test_habr_parse.py tests/test_habr_posts_parse.py tests/t
 - **Повторная обработка**: запись с уже существующим `articles.id` обновляется через upsert. Обновляются `title`, `label`, `stats_counter`, `score_counter`, `bookmarks_counter` и `comments_counter`; поля `action_*` при краулинге не изменяются.
 
 ### Приоритет режимов (проверяются сверху вниз)
-1. `ProfileMode` — сбор отраслей из профилей компаний.
-2. `PostsMode` — сбор постов через пагинацию `/posts/`.
-3. **`ArticlesPagesMode` вместе с `ArticlesMode` — сбор статей через пагинацию `/articles/`**.
-4. **`NewsPagesMode` — сбор новостей через пагинацию `/news/`**.
-5. `NewsMode` — старый режим перебора новостей по ID (`/news/{id}/`).
-6. `ArticlesMode` без `ArticlesPagesMode` — старый перебор статей по ID (`ArticleIdStart..ArticleIdEnd`).
+1. `CategoriesMode` — сбор отраслей из профилей компаний.
+2. `LinksMode` — сбор ссылок из профилей компаний.
+3. `BannersMode` — сбор баннеров из профилей компаний.
+4. `PostsMode` — старый перебор постов по ID (`PostIdStart..PostIdEnd`).
+5. `NewsMode` — старый перебор новостей по ID (`NewsIdStart..NewsIdEnd`).
+6. `ArticlesPagesMode` — сбор статей через пагинацию `/articles/`.
+7. `NewsPagesMode` — сбор новостей через пагинацию `/news/`.
+8. `PostPagesMode` — сбор постов через пагинацию `/posts/`.
+9. `ArticlesMode` — старый перебор статей по ID (`ArticleIdStart..ArticleIdEnd`).
 
-> **Важно**: режимы взаимоисключающие — включите только один режим сбора Habr одновременно. Для `ArticlesPagesMode` необходимо включить оба флага: `ArticlesMode` и `ArticlesPagesMode`.
+> **Важно**: режимы взаимоисключающие — включите только один режим сбора Habr одновременно. Если одновременно включены, например, `PostsMode` и `PostPagesMode`, сработает режим, который находится выше в этом списке (`PostsMode`).
 
 ### Пример конфигурации для ArticlesPagesMode
 ```yaml
 Habr:
-  Enabled: True
-  ArticlesMode: True
+  ArticlesMode: False
   ArticlesPagesMode: True
   ArticlesUrlTemplate: 'https://habr.com/ru/companies/{company}/articles/'
   # Остальные режимы должны быть False:
@@ -517,12 +521,15 @@ Habr:
 ### Пример конфигурации для NewsPagesMode
 ```yaml
 Habr:
-  Enabled: True
+  ArticlesMode: False
   NewsPagesMode: True
   NewsPagesUrlTemplate: 'https://habr.com/ru/companies/{company}/news/'
-  ProfileMode: False
+  CategoriesMode: False
+  LinksMode: False
+  BannersMode: False
   PostsMode: False
-  ArticlesMode: False
+  PostPagesMode: False
+  ArticlesPagesMode: False
   NewsMode: False
 ```
 

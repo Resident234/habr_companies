@@ -12,14 +12,14 @@ Database:
 
 Habr:
   ArticlesMode: False
-  ArticlesPagesMode: True  # True = crawl company articles lists (paginated)
+  ArticlesPagesMode: False  # True = crawl company articles lists (paginated)
   ArticleIdStart: 1
   ArticleIdEnd: 10000000
   ArticleUrlTemplate: 'https://habr.com/ru/companies/{company}/articles/{article_id}/'
   ArticlesUrlTemplate: 'https://habr.com/ru/companies/{company}/articles/'
 
   PostsMode: False    # True = crawl company posts by numeric ID range
-  PostPagesMode: False  # True = crawl company posts lists (paginated)
+  PostPagesMode: True  # True = crawl company posts lists (paginated)
   PostIdStart: 1
   PostIdEnd: 10000000
   PostUrlTemplate: 'https://habr.com/ru/companies/{company}/posts/{post_id}/'

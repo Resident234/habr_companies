@@ -243,7 +243,7 @@ async def post_2xx(f, url, ridealong, priority, host_geoip, json_log, crawler):
 
         charset_log(json_log, charset, detect, charset_used)
 
-        if config.read('Habr', 'ArticlesMode'):
+        if config.habr_mode_enabled():
             # Habr parsing mode: save to MySQL, never follow links
             company_code = ridealong.get('company_code')
             if ridealong.get('profile_page'):

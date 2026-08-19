@@ -250,6 +250,19 @@ def config(configfile, configlist):
     __global_config = combined
 
 
+HABR_MODE_FLAGS = (
+    'ArticlesMode', 'ArticlesPagesMode',
+    'PostsMode', 'PostPagesMode',
+    'NewsMode', 'NewsPagesMode',
+    'CategoriesMode', 'LinksMode', 'BannersMode',
+)
+
+
+def habr_mode_enabled():
+    '''Return True when any independent Habr collection mode is enabled.'''
+    return any(bool(read('Habr', flag)) for flag in HABR_MODE_FLAGS)
+
+
 def read(*l):
     if not isinstance(l, collections.abc.Sequence):
         l = (l,)
