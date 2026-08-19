@@ -6,6 +6,7 @@ All lookups of hubs/labels are cached in memory to avoid repeated
 SELECT round-trips.
 '''
 import logging
+import re
 
 import aiomysql
 
@@ -18,6 +19,7 @@ _pool = None
 
 # in-memory caches: code -> id
 _hub_cache = {}
+_hub_title_cache = {}
 _label_cache = {}
 _category_cache = {}
 
@@ -147,27 +149,44 @@ async def _get_or_create(table, code, title, cache):
             return cur.lastrowid
 
 
+def _normalize_hub_title(title):
+    '''Remove Habr's trailing profiled-hub marker from a title.'''
+    if title is None:
+        return ''
+    return re.sub(r'\s*\*\s*$', '', title.strip())
+
+
 async def get_or_create_hub(code, title):
     '''
     Find hub by code; insert if missing. Returns hub code (string).
     Hubs table uses `code` as primary key, so we return the code itself
-    rather than a numeric id.
+    rather than a numeric id. Existing titles are refreshed so legacy rows
+    containing Habr's profiled-hub marker are repaired on the next crawl.
     '''
-    if code in _hub_cache:
+    title = _normalize_hub_title(title)
+    if (code in _hub_cache and
+            _hub_title_cache.get(code) == title):
         return _hub_cache[code]
 
     pool = await init_pool()
     async with pool.acquire() as conn:
         async with conn.cursor() as cur:
-            await cur.execute('SELECT code FROM hubs WHERE code = %s', (code,))
+            await cur.execute(
+                'SELECT code, title FROM hubs WHERE code = %s', (code,))
             row = await cur.fetchone()
             if row:
+                if title and (row[1] or '') != title:
+                    await cur.execute(
+                        'UPDATE hubs SET title = %s WHERE code = %s',
+                        (title, code))
                 _hub_cache[code] = row[0]
+                _hub_title_cache[code] = title
                 return row[0]
             await cur.execute(
                 'INSERT INTO hubs (code, title) VALUES (%s, %s)',
                 (code, title))
             _hub_cache[code] = code
+            _hub_title_cache[code] = title
             stats.stats_sum('hubs created', 1)
             LOGGER.info('created hub: code=%s title=%s', code, title)
             return code

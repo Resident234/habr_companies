@@ -170,7 +170,8 @@ def parse_news_list_html(html):
                     code = cm.group(1)
                 else:
                     code = href.strip('/').split('/')[-1]
-                hub_title = a.get_text(' ', strip=True)
+                hub_title = habr_parse._normalize_hub_title(
+                    a.get_text(' ', strip=True))
                 if code:
                     hubs.append({'code': code, 'title': hub_title})
 

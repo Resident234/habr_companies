@@ -106,7 +106,8 @@ class HabrArticlesSeedGenerator:
         }
         self.crawler.add_url(1, ridealong)
 
-    def queue_article_page(self, company_code, article_id, article_url=None):
+    def queue_article_page(self, company_code, article_id, article_url=None,
+                           hubs=None):
         '''Enqueue one article detail page discovered on a list page.'''
         if article_url is None:
             template = config.read('Habr', 'ArticleUrlTemplate') or \
@@ -122,6 +123,10 @@ class HabrArticlesSeedGenerator:
             'company_code': company_code,
             'article_id': article_id,
             'articles_detail_page': True,
+            # Preserve every hub found in the list preview. The detail page is
+            # authoritative when it contains the same code, but this fallback
+            # prevents a partial detail response from dropping list hubs.
+            'article_hubs': list(hubs or []),
         }
         self.crawler.add_url(1, ridealong)
 
@@ -206,7 +211,8 @@ def parse_articles_list_html(html):
                     code = cm.group(1)
                 else:
                     code = href.strip('/').split('/')[-1]
-                hub_title = a.get_text(' ', strip=True)
+                hub_title = habr_parse._normalize_hub_title(
+                    a.get_text(' ', strip=True))
                 if code:
                     hubs.append({'code': code, 'title': hub_title})
 
@@ -279,7 +285,8 @@ async def parse_and_save_articles(html, company_code, page, crawler=None):
             generator = getattr(crawler, 'habr_generator', None)
             if generator is not None and hasattr(generator, 'queue_article_page'):
                 generator.queue_article_page(
-                    company_code, article['id'], article.get('url'))
+                    company_code, article['id'], article.get('url'),
+                    article.get('hubs'))
             else:
                 template = config.read('Habr', 'ArticleUrlTemplate') or \
                     ARTICLE_URL_TEMPLATE
@@ -293,6 +300,7 @@ async def parse_and_save_articles(html, company_code, page, crawler=None):
                     'company_code': company_code,
                     'article_id': article['id'],
                     'articles_detail_page': True,
+                    'article_hubs': list(article.get('hubs') or []),
                 })
             queued += 1
             continue
@@ -310,10 +318,13 @@ async def parse_and_save_articles(html, company_code, page, crawler=None):
         )
         if inserted:
             saved += 1
-            for hub in article['hubs']:
-                hub_code = await db.get_or_create_hub(
-                    hub['code'], hub['title'])
-                await db.link_article_hub(article['id'], hub_code)
+
+        # Existing article rows may still be missing relations, so this must
+        # run for both inserts and updates.
+        for hub in article['hubs']:
+            hub_code = await db.get_or_create_hub(
+                hub['code'], hub['title'])
+            await db.link_article_hub(article['id'], hub_code)
 
     stats.stats_sum('habr articles detail urls queued', queued)
     stats.stats_sum('habr articles saved', saved)

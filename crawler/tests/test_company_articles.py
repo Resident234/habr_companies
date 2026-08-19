@@ -15,6 +15,10 @@ HTML = '''
   <div class="article-formatted-body"><strong>Неправильный текст preview</strong></div>
   <a href="/ru/companies/oktell/articles/1066076/">Открыть статью</a>
   <span class="tm-icon-counter__value" title="3700">3.7K</span>
+  <div class="tm-publication-hubs">
+    <a href="/ru/companies/oktell/articles/" class="tm-publication-hub__link"><span>Блог компании Oktell</span></a>
+    <a href="/ru/hubs/telecom/" class="tm-publication-hub__link"><span>Телеком</span><span class="tm-article-snippet__profiled-hub"> * </span></a>
+  </div>
 </article>
 '''
 
@@ -24,8 +28,9 @@ class FakeGenerator:
         self.detail_urls = []
         self.list_pages = []
 
-    def queue_article_page(self, company_code, article_id, article_url=None):
-        self.detail_urls.append((company_code, article_id, article_url))
+    def queue_article_page(self, company_code, article_id, article_url=None,
+                           hubs=None):
+        self.detail_urls.append((company_code, article_id, article_url, hubs))
 
     def queue_articles_page(self, company_code, page):
         self.list_pages.append((company_code, page))
@@ -59,5 +64,9 @@ def test_articles_pages_mode_queues_detail_page_instead_of_saving_preview():
         'oktell',
         1066076,
         'https://habr.com/ru/companies/oktell/articles/1066076/',
+        [
+            {'code': 'oktell', 'title': 'Блог компании Oktell'},
+            {'code': 'telecom', 'title': 'Телеком'},
+        ],
     )]
     assert crawler.habr_generator.list_pages == [('oktell', 2)]

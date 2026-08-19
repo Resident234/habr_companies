@@ -19,6 +19,34 @@ ARTICLE_URL_RE = re.compile(
     r'/ru/companies/(?P<company>[^/]+)/articles/(?P<article_id>\d+)')
 
 
+def _normalize_hub_title(title):
+    '''Return a hub title without Habr's trailing profiled-hub marker.'''
+    if title is None:
+        return ''
+    return re.sub(r'\s*\*\s*$', '', title.strip())
+
+
+def _merge_hubs(detail_hubs, fallback_hubs):
+    '''Merge hubs by code, preferring detail-page titles when available.'''
+    merged = []
+    by_code = {}
+    for hub in list(detail_hubs or []) + list(fallback_hubs or []):
+        if not isinstance(hub, dict):
+            continue
+        code = (hub.get('code') or '').strip()
+        if not code:
+            continue
+        title = _normalize_hub_title(hub.get('title'))
+        existing = by_code.get(code)
+        if existing is None:
+            existing = {'code': code, 'title': title}
+            by_code[code] = existing
+            merged.append(existing)
+        elif not existing['title'] and title:
+            existing['title'] = title
+    return merged
+
+
 def _to_int(text):
     '''
     Convert counter text to int. Handles '+12', '−3' (unicode minus),
@@ -79,7 +107,8 @@ def parse_article_html(html, url):
                 code = cm.group(1)
             else:
                 code = href.strip('/').split('/')[-1]
-            hub_title = a.get_text(' ', strip=True)
+            hub_title = _normalize_hub_title(
+                a.get_text(' ', strip=True))
             if code:
                 hubs.append({'code': code, 'title': hub_title})
 
@@ -127,10 +156,13 @@ def parse_article_html(html, url):
     }
 
 
-async def parse_and_save(html, url, company_code):
+async def parse_and_save(html, url, company_code, article_hubs=None):
     '''
     Parse the article page and write everything to the database.
-    Returns True if an article was saved.
+
+    ``article_hubs`` contains hubs discovered on the list page that queued
+    this detail URL. They are merged as a fallback so a redirect or partial
+    detail response cannot silently lose article-hub relations.
     '''
     try:
         data = parse_article_html(html, url)
@@ -146,6 +178,8 @@ async def parse_and_save(html, url, company_code):
     if data['id'] is None:
         LOGGER.warning('no article id in url %s', url)
         return False
+
+    data['hubs'] = _merge_hubs(data.get('hubs'), article_hubs)
 
     label_code = None
     if data['label'] and data['label']['title']:
@@ -163,10 +197,13 @@ async def parse_and_save(html, url, company_code):
         comments_counter=data['comments_counter'],
     )
 
+    # Relation persistence must not depend on whether the article row was
+    # inserted or updated. Existing articles can still gain missing hubs.
+    for hub in data['hubs']:
+        hub_code = await db.get_or_create_hub(hub['code'], hub['title'])
+        await db.link_article_hub(data['id'], hub_code)
+
     if inserted:
-        for hub in data['hubs']:
-            hub_code = await db.get_or_create_hub(hub['code'], hub['title'])
-            await db.link_article_hub(data['id'], hub_code)
         LOGGER.info('saved article %s (%s) for company %s',
                     data['id'], data['title'][:50], company_code)
 

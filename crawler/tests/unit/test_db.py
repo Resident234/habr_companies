@@ -27,6 +27,18 @@ class FakeCursor:
         self.params = params
 
 
+class HubCursor:
+    def __init__(self, row):
+        self.row = row
+        self.executed = []
+
+    async def execute(self, query, params):
+        self.executed.append((query, params))
+
+    async def fetchone(self):
+        return self.row
+
+
 class FakeConnection:
     def __init__(self, cursor):
         self.cursor_instance = cursor
@@ -188,3 +200,25 @@ def test_post_detail_parser_is_routed(monkeypatch, flag, parser_name):
     assert "ridealong.get('post_id') is not None" in source
     assert parser_name in source
     assert flag in source
+
+
+def test_get_or_create_hub_normalizes_and_repairs_existing_title(monkeypatch):
+    cursor = HubCursor(('webdev', 'Веб-разработка *'))
+    pool = FakePool(cursor)
+
+    async def fake_init_pool():
+        return pool
+
+    monkeypatch.setattr(db, 'init_pool', fake_init_pool)
+    db._hub_cache.clear()
+    db._hub_title_cache.clear()
+
+    result = asyncio.get_event_loop().run_until_complete(
+        db.get_or_create_hub('webdev', 'Веб-разработка *'))
+
+    assert result == 'webdev'
+    assert cursor.executed[0] == (
+        'SELECT code, title FROM hubs WHERE code = %s', ('webdev',))
+    assert cursor.executed[1] == (
+        'UPDATE hubs SET title = %s WHERE code = %s',
+        ('Веб-разработка', 'webdev'))

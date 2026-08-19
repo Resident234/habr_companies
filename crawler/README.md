@@ -27,13 +27,15 @@ https://habr.com/ru/companies/{company_code}/articles/{article_id}/
 | `bookmarks_counter`| текст внутри `button.bookmarks-button span.counter` |
 | `comments_counter` | текст внутри `a.article-comments-counter-link span.value` |
 
-Хабы статьи (ссылки `a.tm-publication-hub__link` внутри
-`.tm-publication-hubs`) сохраняются в справочник `hubs`
-(code — из URL `/ru/hubs/{code}/`, title — текст ссылки) и
-привязываются к статье через связную таблицу `article_hubs`
-(many-to-many). Справочники `hubs` и `labels` пополняются по мере
-обнаружения новых значений (поиск по `code`/`title`, если нет —
-вставка).
+Хабы статьи извлекаются из **всех** ссылок `a.tm-publication-hub__link`
+внутри `.tm-publication-hubs`; парсер не ограничивается первым найденным
+хабом. В том числе сохраняется ссылка на блог компании как хаб с кодом
+компании. Код берётся из URL `/ru/hubs/{code}/` или `/ru/companies/{code}/`,
+а title — из видимого текста ссылки. Завершающий маркер профильного хаба
+`*`, который Habr отдаёт во вложенном `span.tm-article-snippet__profiled-hub`,
+удаляется до сохранения. Связь статьи с каждым хабом записывается в
+`article_hubs` (many-to-many). Справочники `hubs` и `labels` пополняются по
+мере обнаружения новых значений (поиск по `code`; если записи нет — вставка).
 
 ## Установка
 
@@ -534,7 +536,7 @@ Habr:
 Разница только в **методе сбора**: пагинация списка вместо перебора ID.
 
 ### Источник данных статьи и upsert
-В `ArticlesPagesMode` HTML страницы списка используется для обнаружения `article_id`, ссылки на детальную страницу и хабов. Если crawler передан в `parse_and_save_articles()`, preview-заголовок не сохраняется как итоговый `title`: детальная страница ставится в очередь с `article_id` и обрабатывается `habr_parse.parse_and_save()`. Этот парсер берёт заголовок из `h1.tm-title.tm-title_h1`.
+В `ArticlesPagesMode` HTML страницы списка используется для обнаружения `article_id`, ссылки на детальную страницу и **всех** хабов. Если crawler передан в `parse_and_save_articles()`, preview-заголовок не сохраняется как итоговый `title`: детальная страница ставится в очередь с `article_id` и полным списком найденных хабов, после чего обрабатывается `habr_parse.parse_and_save()`. Этот парсер берёт заголовок из `h1.tm-title.tm-title_h1`, объединяет хабы detail-страницы с хабами из preview по `code` и записывает каждую уникальную связь в `article_hubs`. Поэтому частичный detail-ответ или redirect не приводит к потере хаба, уже найденного на странице списка.
 
 Сохранение выполняется через upsert по первичному ключу `articles.id`. При существующей записи crawler обновляет `title`, `label`, `stats_counter`, `score_counter`, `bookmarks_counter` и `comments_counter`. Любые `action_*` поля не входят в update-часть и поэтому не изменяются при краулинге.
 
@@ -542,8 +544,8 @@ Habr:
 1. **Генераторы сидов** (`habrcrawler/company_articles.py`, `habrcrawler/company_news.py`) создают `HabrArticlesSeedGenerator` / `HabrNewsSeedGenerator`.
 2. При старте для каждой компании ставится в очередь **первая страница** (`page=1`).
 3. В `post_fetch.py` при обработке ответа с флагом `articles_page` / `news_page` вызывается `parse_and_save_articles()` / `parse_and_save_news()`.
-4. Для статей parser извлекает preview-данные и ставит в очередь детальные URL; для новостей записи сохраняются из страницы списка.
-5. При обработке детальной статьи `post_fetch.py` вызывает `habr_parse.parse_and_save()`, который сохраняет точный `h1`-заголовок и выполняет upsert статьи.
+4. Для статей parser извлекает preview-данные, все хабы и ставит в очередь детальные URL вместе с этим списком; для новостей записи сохраняются из страницы списка.
+5. При обработке детальной статьи `post_fetch.py` передаёт сохранённый список preview-хабов в `habr_parse.parse_and_save()`. Парсер объединяет его с хабами detail-страницы, делает upsert статьи и вызывает `link_article_hub()` для каждой уникальной связи.
 6. Если на странице были записи, генератор автоматически ставит в очередь **следующую страницу** (`page+1`).
 7. Процесс продолжается, пока страница не вернётся пустой.
 
@@ -628,7 +630,7 @@ Source launch requires a full Git checkout with the parent .git directory.
 
 Transient `aiohttp` failures such as `ServerDisconnectedError` are retryable. The crawler requeues the affected URL while `retries_left` remains positive; a `we failed working on ...` line describes one failed attempt and is not, by itself, proof that the URL was permanently lost. The final crawler log records `retries_left: 0` when all attempts are exhausted.
 
-Article hub links are stored idempotently with `ON DUPLICATE KEY UPDATE`, so rerunning a page does not create duplicate-key warnings. Article upserts use the MySQL row-alias form (`new.column`) instead of the deprecated `VALUES(column)` form.
+Article hub links are stored idempotently with `ON DUPLICATE KEY UPDATE`, so rerunning a page does not create duplicate-key warnings. Hub titles are normalized before persistence; when an existing hub row still contains the legacy trailing `*`, the next crawl updates that row to the clean title. For an immediate cleanup of already stored rows, run `../sql/normalize_hub_titles.sql` once; the migration is idempotent. Article upserts use the MySQL row-alias form (`new.column`) instead of the deprecated `VALUES(column)` form.
 ## Recommended Crawl profile
 
 The current Windows configuration uses a conservative Habr request profile:
@@ -647,6 +649,10 @@ This profile reduces concurrent requests and host rate while allowing transient 
 ### Idempotent relation inserts
 
 Many-to-many relation writers for `article_hubs`, `post_hubs`, `news_hubs`, and `company_categories` use `INSERT ... ON DUPLICATE KEY UPDATE` with a no-op assignment. This makes repeated crawler runs safe and avoids the MySQL warning generated by `INSERT IGNORE` when an existing relation is encountered. The article row itself continues to use its metadata upsert, while `action_*` fields remain untouched.
+
+### Hub parsing regression coverage
+
+The parser regression fixture for `https://habr.com/ru/companies/ruvds/articles/1057964/` contains the company blog link plus four ordinary hubs. The test verifies that all five links from `.tm-publication-hubs` are returned and that titles such as `Бизнес-модели *` are stored as `Бизнес-модели`. A save-path regression test verifies that hubs found on the list page are merged with a partial detail response and that every resulting code is passed to `link_article_hub()`. Database tests additionally verify that a legacy row such as `Веб-разработка *` is repaired on the next crawl. The same normalization is applied to article, post, and news list/detail hub paths. The live database audit found 65,518 articles, 240,699 article-hub links, and 65,388 articles with at least one link; the remaining 130 zero-link rows include 128 empty-title placeholders and two redirected special pages, not ordinary articles missing parsed hubs.
 ## Monitoring and performance metrics
 
 The crawler uses the existing `habrcrawler.stats` infrastructure and emits a consolidated report from `Crawler.minute()` once per minute and once during shutdown. The report keeps cumulative counters, current gauges, and interval rates in the same log stream; it does not create a second monitoring subsystem.

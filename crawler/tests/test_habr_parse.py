@@ -2,12 +2,14 @@
 Unit test for the Habr article parser, based on the HTML snippets from
 the task description.
 '''
+import asyncio
 import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from habrcrawler.habr_parse import parse_article_html, _to_int
+from habrcrawler import db
+from habrcrawler.habr_parse import parse_and_save, parse_article_html, _to_int
 
 URL = 'https://habr.com/ru/companies/ru_mts/articles/1066076/'
 
@@ -80,3 +82,95 @@ def test_parse_article_title_from_detail_page():
 
     assert data is not None
     assert data['title'] == YEASTAR_TITLE
+
+
+RUVDS_MULTI_HUB_URL = 'https://habr.com/ru/companies/ruvds/articles/1057964/'
+RUVDS_MULTI_HUB_HTML = '''
+<html><body>
+<div class="tm-publication-hubs">
+  <a href="/ru/companies/ruvds/articles/" class="tm-publication-hub__link"><span>Блог компании RUVDS.com</span></a>
+  <a href="/ru/hubs/business_models/" class="tm-publication-hub__link"><span>Бизнес-модели</span><span class="tm-article-snippet__profiled-hub" title="Профильный хаб"> * </span></a>
+  <a href="/ru/hubs/webdev/" class="tm-publication-hub__link"><span>Веб-разработка</span><span class="tm-article-snippet__profiled-hub" title="Профильный хаб"> * </span></a>
+  <a href="/ru/hubs/engineering_systems/" class="tm-publication-hub__link"><span>Инженерные системы</span><span class="tm-article-snippet__profiled-hub" title="Профильный хаб"> * </span></a>
+  <a href="/ru/hubs/infosecurity/" class="tm-publication-hub__link"><span>Информационная безопасность</span><span class="tm-article-snippet__profiled-hub" title="Профильный хаб"> * </span></a>
+</div>
+<h1 class="tm-title tm-title_h1"><span>Формула «идеального enterprise» для open-source</span></h1>
+</body></html>
+'''
+
+
+def test_parse_all_article_hubs_and_strip_profiled_marker():
+    data = parse_article_html(RUVDS_MULTI_HUB_HTML, RUVDS_MULTI_HUB_URL)
+
+    assert data is not None
+    assert data['hubs'] == [
+        {'code': 'ruvds', 'title': 'Блог компании RUVDS.com'},
+        {'code': 'business_models', 'title': 'Бизнес-модели'},
+        {'code': 'webdev', 'title': 'Веб-разработка'},
+        {'code': 'engineering_systems', 'title': 'Инженерные системы'},
+        {'code': 'infosecurity', 'title': 'Информационная безопасность'},
+    ]
+
+
+def test_normalize_hub_title_only_removes_trailing_marker():
+    from habrcrawler.habr_parse import _normalize_hub_title
+
+    assert _normalize_hub_title('Agile *') == 'Agile'
+    assert _normalize_hub_title('C++') == 'C++'
+    assert _normalize_hub_title('Asterisk * in title') == 'Asterisk * in title'
+    assert _normalize_hub_title(None) == ''
+
+
+def test_parse_and_save_links_detail_and_list_hubs(monkeypatch):
+    detail_html = '''
+    <html><body>
+      <div class="tm-publication-hubs">
+        <a href="/ru/hubs/webdev/" class="tm-publication-hub__link">
+          <span>Веб-разработка</span>
+        </a>
+      </div>
+      <h1 class="tm-title tm-title_h1"><span>Partial detail</span></h1>
+    </body></html>
+    '''
+    hub_calls = []
+    link_calls = []
+
+    async def fake_insert_article(**kwargs):
+        # Simulate an existing article/upsert path.
+        return False
+
+    async def fake_get_or_create_hub(code, title):
+        hub_calls.append((code, title))
+        return code
+
+    async def fake_link_article_hub(article_id, hub_code):
+        link_calls.append((article_id, hub_code))
+
+    monkeypatch.setattr(db, 'insert_article', fake_insert_article)
+    monkeypatch.setattr(db, 'get_or_create_hub', fake_get_or_create_hub)
+    monkeypatch.setattr(db, 'link_article_hub', fake_link_article_hub)
+
+    result = asyncio.get_event_loop().run_until_complete(parse_and_save(
+        detail_html,
+        RUVDS_MULTI_HUB_URL,
+        'ruvds',
+        article_hubs=[
+            {'code': 'ruvds', 'title': 'Блог компании RUVDS.com'},
+            {'code': 'webdev', 'title': 'Веб-разработка *'},
+            {'code': 'business_models', 'title': 'Бизнес-модели *'},
+        ],
+    ))
+
+    assert result is False
+    assert [code for code, _ in hub_calls] == [
+        'webdev', 'ruvds', 'business_models']
+    assert hub_calls == [
+        ('webdev', 'Веб-разработка'),
+        ('ruvds', 'Блог компании RUVDS.com'),
+        ('business_models', 'Бизнес-модели'),
+    ]
+    assert link_calls == [
+        (1057964, 'webdev'),
+        (1057964, 'ruvds'),
+        (1057964, 'business_models'),
+    ]

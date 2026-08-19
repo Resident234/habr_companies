@@ -297,7 +297,8 @@ async def post_2xx(f, url, ridealong, priority, host_geoip, json_log, crawler):
                 # Article detail page: use the h1 title from the full article.
                 try:
                     saved = await habr_parse.parse_and_save(
-                        body, url.url, company_code)
+                        body, url.url, company_code,
+                        article_hubs=ridealong.get('article_hubs'))
                     json_log['habr_article_saved'] = bool(saved)
                 except Exception as e:
                     stats.stats_sum('habr article save errors', 1)

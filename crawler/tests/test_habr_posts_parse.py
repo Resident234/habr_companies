@@ -49,7 +49,13 @@ def test_parse_posts_list_html():
 
     codes = [h['code'] for h in post['hubs']]
     assert codes == ['avito', 'it_testing', 'web_testing', 'mobile_testing']
-    assert post['hubs'][1]['title'] == 'Тестирование IT-систем *'
+    assert post['hubs'][1]['title'] == 'Тестирование IT-систем'
+    assert [hub['title'] for hub in post['hubs']] == [
+        'Блог компании AvitoTech',
+        'Тестирование IT-систем',
+        'Тестирование веб-сервисов',
+        'Тестирование мобильных приложений',
+    ]
 
 
 def test_parse_empty_page_returns_empty_list():

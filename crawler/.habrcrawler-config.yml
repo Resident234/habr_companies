@@ -11,7 +11,7 @@ Database:
   MaxPoolSize: 10  # максимальный размер пула MySQL
 
 Habr:
-  ArticlesMode: True
+  ArticlesMode: False
   ArticlesPagesMode: True  # True = crawl company articles lists (paginated)
   ArticleIdStart: 1
   ArticleIdEnd: 10000000

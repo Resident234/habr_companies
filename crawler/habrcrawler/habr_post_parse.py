@@ -191,7 +191,8 @@ def _parse_hubs_json(post_json):
     hubs = []
     for hub_m in HUB_RE.finditer(post_json):
         code = _unescape(hub_m.group(1)).strip()
-        title = _unescape(hub_m.group(2)).strip()
+        title = habr_parse._normalize_hub_title(
+            _unescape(hub_m.group(2)))
         if code:
             hubs.append({'code': code, 'title': title})
     return hubs
