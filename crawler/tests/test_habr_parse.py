@@ -19,7 +19,9 @@ HTML = '''
   <a href="/ru/hubs/artificial_intelligence/" class="tm-publication-hub__link tm-publication-hub__link_subscribed"><!--[--><span>Искусственный интеллект</span><!----><!--]--></a>
   <a href="/ru/hubs/machine_learning/" class="tm-publication-hub__link"><span>Машинное обучение</span></a>
 </div>
+<div class="tm-article-presenter__header">
 <h1 class="tm-title tm-title_h1" lang="ru" data-v-2f5dd140=""><span>«Вам может это понравиться»: на Урбан ML разобрались, почему рекомендательные системы перестали предлагать похожее</span></h1>
+</div>
 <span class="tm-icon-counter__value" title="1860">1.9K</span>
 <div class="publication-label variant-reportage" data-v-d420b184="" data-v-db35b1ec=""><span data-v-db35b1ec="">Репортаж</span></div>
 <span class="tm-votes-meter__value tm-votes-meter__value_rating" title="Рейтинг">+12</span>
@@ -66,9 +68,11 @@ YEASTAR_TITLE = 'Плата компьютерной телефонии «Yeasta
 YEASTAR_DETAIL_HTML = f'''
 <html><body>
   <article class="tm-article-presenter__content">
-    <h1 class="tm-title tm-title_h1" lang="ru">
-      <span>{YEASTAR_TITLE}</span>
-    </h1>
+    <div class="tm-article-presenter__header">
+      <h1 class="tm-title tm-title_h1" lang="ru">
+        <span>{YEASTAR_TITLE}</span>
+      </h1>
+    </div>
     <div class="article-formatted-body">
       <strong>Неправильный текст из preview списка статей</strong>
     </div>
@@ -94,7 +98,7 @@ RUVDS_MULTI_HUB_HTML = '''
   <a href="/ru/hubs/engineering_systems/" class="tm-publication-hub__link"><span>Инженерные системы</span><span class="tm-article-snippet__profiled-hub" title="Профильный хаб"> * </span></a>
   <a href="/ru/hubs/infosecurity/" class="tm-publication-hub__link"><span>Информационная безопасность</span><span class="tm-article-snippet__profiled-hub" title="Профильный хаб"> * </span></a>
 </div>
-<h1 class="tm-title tm-title_h1"><span>Формула «идеального enterprise» для open-source</span></h1>
+<div class="tm-article-presenter__header"><h1 class="tm-title tm-title_h1"><span>Формула «идеального enterprise» для open-source</span></h1></div>
 </body></html>
 '''
 
@@ -129,7 +133,7 @@ def test_parse_and_save_links_detail_and_list_hubs(monkeypatch):
           <span>Веб-разработка</span>
         </a>
       </div>
-      <h1 class="tm-title tm-title_h1"><span>Partial detail</span></h1>
+      <div class="tm-article-presenter__header"><h1 class="tm-title tm-title_h1"><span>Partial detail</span></h1></div>
     </body></html>
     '''
     hub_calls = []

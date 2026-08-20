@@ -19,7 +19,7 @@ Habr:
   ArticlesUrlTemplate: 'https://habr.com/ru/companies/{company}/articles/'
 
   PostsMode: False    # True = crawl company posts by numeric ID range
-  PostPagesMode: True  # True = crawl company posts lists (paginated)
+  PostPagesMode: False  # True = crawl company posts lists (paginated)
   PostIdStart: 1
   PostIdEnd: 10000000
   PostUrlTemplate: 'https://habr.com/ru/companies/{company}/posts/{post_id}/'
@@ -32,7 +32,7 @@ Habr:
   NewsUrlTemplate: 'https://habr.com/ru/companies/{company}/news/{news_id}/'
   NewsPagesUrlTemplate: 'https://habr.com/ru/companies/{company}/news/'
 
-  CategoriesMode: False  # True = crawl company profiles for categories
+  CategoriesMode: True  # True = crawl company profiles for categories
   LinksMode: False    # True = crawl company profiles for widget links
   BannersMode: False  # True = crawl company profiles for banner links
 

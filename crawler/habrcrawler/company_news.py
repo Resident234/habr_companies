@@ -109,21 +109,6 @@ class HabrNewsSeedGenerator:
         '''
 
 
-def _extract_title(article):
-    '''
-    News title: the first <strong> inside the formatted body, falling
-    back to the first paragraph when no <strong> is present.
-    '''
-    body = article.find(class_='article-formatted-body')
-    if body is None:
-        return ''
-    strong = body.find('strong')
-    if strong is not None:
-        return strong.get_text(' ', strip=True)
-    p = body.find('p')
-    return p.get_text(' ', strip=True) if p else ''
-
-
 def parse_news_list_html(html):
     '''
     Parse a company news list page and return a list of news dicts:
@@ -146,8 +131,6 @@ def parse_news_list_html(html):
         if body is None:
             # not a full news snippet (ad block, pinned banner, etc.)
             continue
-
-        title = _extract_title(article)
 
         # views: <span class="tm-icon-counter__value" title="3256">3.3K</span>
         stats_counter = None
@@ -200,7 +183,7 @@ def parse_news_list_html(html):
 
         news.append({
             'id': news_id,
-            'title': title,
+            'title': '',
             'stats_counter': stats_counter,
             'hubs': hubs,
             'score_counter': score_counter,

@@ -76,7 +76,14 @@ def parse_article_html(html, url):
     '''
     soup = BeautifulSoup(html, 'lxml')
 
-    h1 = soup.find('h1', class_='tm-title')
+    # На детальной странице новости заголовок лежит в элементе class="tm-title tm-title_h1" 
+    # внутри class="tm-article-presenter__header".
+    # На страницах статей селектор может быть просто h1 с классом tm-title.
+    header = soup.find(class_='tm-article-presenter__header')
+    if header:
+        h1 = header.find('h1', class_=lambda c: c and 'tm-title' in c.split())
+    else:
+        h1 = soup.find('h1', class_=lambda c: c and 'tm-title' in c.split())
     if h1 is None:
         # not an article page (redirect target, error page, etc.)
         return None
