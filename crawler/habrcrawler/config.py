@@ -139,8 +139,9 @@ Habr:
   ArticlesPagesMode: False  # if True, crawl company articles lists (paginated)
   NewsPagesMode: False  # if True, crawl company news lists (paginated)
   LinksMode: False  # if True, crawl company profiles for widget links
+  LinksUrlTemplate: 'https://habr.com/kek/v2/companies/{company}/widgets/?fl=ru&hl=ru'
   BannersMode: False  # if True, crawl company profiles for banner links
-  BannersUrlTemplate: 'https://habr.com/ru/companies/{company}/profile/'
+  BannersUrlTemplate: 'https://habr.com/kek/v2/companies/{company}/widgets/?fl=ru&hl=ru'
   ArticleIdStart: 1
   ArticleIdEnd: 10000000
   ArticleUrlTemplate: 'https://habr.com/ru/companies/{company}/articles/{article_id}/'

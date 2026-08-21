@@ -77,6 +77,7 @@ Habr:
   ArticlesUrlTemplate: 'https://habr.com/ru/companies/{company}/articles/'
   NewsPagesMode: False      # True = собирать новости через пагинацию /companies/{code}/news/
   NewsPagesUrlTemplate: 'https://habr.com/ru/companies/{company}/news/'
+  LinksUrlTemplate: 'https://habr.com/kek/v2/companies/{company}/widgets/?fl=ru&hl=ru'
   # Старые режимы (перебор по ID):
   ProfileMode: False    # True = собирать отрасли из профилей компаний
   PostsMode: False      # True = собирать посты из ленты /companies/{code}/posts/
@@ -494,8 +495,8 @@ python -m pytest tests/test_habr_parse.py tests/test_habr_posts_parse.py tests/t
 
 ### Приоритет режимов (проверяются сверху вниз)
 1. `CategoriesMode` — сбор отраслей из профилей компаний.
-2. `LinksMode` — сбор ссылок из профилей компаний.
-3. `BannersMode` — сбор баннеров из профилей компаний.
+2. `LinksMode` — сбор ссылок из профилей компаний (запрашиваются через внутренний API виджетов `https://habr.com/kek/v2/companies/{company}/widgets/?fl=ru&hl=ru`, так как они больше не отдаются в HTML страницы профиля). Для корректной работы краулер теперь разрешает парсинг ответов с `Content-Type: application/json`. Если API перенаправляет запрос на обычную HTML-страницу профиля (что бывает для некоторых компаний), парсер автоматически переключается в режим fallback и пытается извлечь ссылки из HTML.
+3. `BannersMode` — сбор баннеров из профилей компаний (запрашиваются через внутренний API виджетов по шаблону `BannersUrlTemplate` — по умолчанию `https://habr.com/kek/v2/companies/{company}/widgets/?fl=ru&hl=ru`, так как они больше не отдаются в HTML страницы профиля. Если API возвращает HTML, работает fallback на старый парсинг).
 4. `PostsMode` — старый перебор постов по ID (`PostIdStart..PostIdEnd`).
 5. `NewsMode` — старый перебор новостей по ID (`NewsIdStart..NewsIdEnd`).
 6. `ArticlesPagesMode` — сбор статей через пагинацию `/articles/`.

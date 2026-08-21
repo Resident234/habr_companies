@@ -32,9 +32,11 @@ Habr:
   NewsUrlTemplate: 'https://habr.com/ru/companies/{company}/news/{news_id}/'
   NewsPagesUrlTemplate: 'https://habr.com/ru/companies/{company}/news/'
 
-  CategoriesMode: True  # True = crawl company profiles for categories
+  CategoriesMode: False  # True = crawl company profiles for categories
   LinksMode: False    # True = crawl company profiles for widget links
-  BannersMode: False  # True = crawl company profiles for banner links
+  LinksUrlTemplate: 'https://habr.com/kek/v2/companies/{company}/widgets/?fl=ru&hl=ru'
+  BannersMode: True  # True = crawl company profiles for banner links
+  BannersUrlTemplate: 'https://habr.com/kek/v2/companies/{company}/widgets/?fl=ru&hl=ru'
 
   SeedBatchSize: 20000
   ProfileUrlTemplate: 'https://habr.com/ru/companies/{company}/profile/'

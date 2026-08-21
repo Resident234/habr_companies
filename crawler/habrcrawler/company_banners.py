@@ -34,18 +34,17 @@ from .urls import URL
 
 LOGGER = logging.getLogger(__name__)
 
-PROFILE_URL_TEMPLATE = 'https://habr.com/ru/companies/{company}/profile/'
-
+BANNERS_URL_TEMPLATE = 'https://habr.com/kek/v2/companies/{company}/widgets/?fl=ru&hl=ru'
 
 class HabrCompanyBannersSeedGenerator:
     '''
-    Lazily generates profile urls for every company in the database.
+    Lazily generates widgets API urls for every company in the database.
     '''
 
     def __init__(self, crawler):
         self.crawler = crawler
         self.template = config.read(
-            'Habr', 'BannersUrlTemplate') or PROFILE_URL_TEMPLATE
+            'Habr', 'BannersUrlTemplate') or BANNERS_URL_TEMPLATE
         self.companies = []
         self.index = 0
         self.exhausted = False
@@ -98,39 +97,68 @@ class HabrCompanyBannersSeedGenerator:
 
 def parse_banners_html(html):
     '''
-    Parse a company profile page and return a list of banner href dicts.
+    Parse a company widgets API response and return a list of banner href dicts.
     Each dict contains: href.
-
-    Tries <div class="swiper-wrapper"> first (multiple banners),
-    then falls back to <div class="tm-widget-banner-content"> (single banner).
+    
+    Fallback: if the response is HTML instead of JSON, it attempts to extract 
+    banners from the HTML directly.
     '''
-    soup = BeautifulSoup(html, 'lxml')
-
-    # Try multiple banners inside swiper-wrapper first
-    swiper = soup.find('div', class_='swiper-wrapper')
-    if swiper is not None:
-        anchors = swiper.find_all(
-            'a', class_='tm-widget-banner-content__image-wrapper')
-    else:
-        # Fallback: single banner container without swiper-wrapper
-        banner = soup.find('div', class_='tm-widget-banner-content')
-        if banner is None:
-            return []
-        anchors = banner.find_all(
-            'a', class_='tm-widget-banner-content__image-wrapper')
-
     links = []
-    seen = set()
-    for a in anchors:
-        href = (a.get('href') or '').strip()
-        if not href:
-            continue
-        if href in seen:
-            continue
-        seen.add(href)
-        links.append({'href': href})
+    if not html or not html.strip():
+        return []
+        
+    try:
+        data = json.loads(html)
+        
+        widget_refs = data.get('widgetRefs', [])
+        if not widget_refs:
+            return []
 
-    return links
+        seen = set()
+        for widget in widget_refs:
+            if widget.get('type') == 'banner':
+                widget_data = widget.get('data', {})
+                href = (widget_data.get('imageLinkUrl') or '').strip()
+                if not href:
+                    continue
+                if href in seen:
+                    continue
+                seen.add(href)
+                links.append({'href': href})
+        return links
+        
+    except json.JSONDecodeError:
+        # Not JSON. If it looks like HTML, fallback to parsing HTML
+        if '<html' in html.lower() or '<!doctype html' in html.lower():
+            soup = BeautifulSoup(html, 'lxml')
+            
+            # Try multiple banners inside swiper-wrapper first
+            swiper = soup.find('div', class_='swiper-wrapper')
+            if swiper is not None:
+                anchors = swiper.find_all(
+                    'a', class_='tm-widget-banner-content__image-wrapper')
+            else:
+                # Fallback: single banner container without swiper-wrapper
+                banner = soup.find('div', class_='tm-widget-banner-content')
+                if banner is None:
+                    return []
+                anchors = banner.find_all(
+                    'a', class_='tm-widget-banner-content__image-wrapper')
+
+            seen = set()
+            for a in anchors:
+                href = (a.get('href') or '').strip()
+                if not href:
+                    continue
+                if href in seen:
+                    continue
+                seen.add(href)
+                links.append({'href': href})
+            return links
+            
+        snippet = repr(html[:100])
+        LOGGER.warning('failed to decode JSON from widgets API and not HTML. Content: %s', snippet)
+        return []
 
 
 async def _merge_banner_links(company_code, new_links):

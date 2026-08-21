@@ -10,108 +10,115 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from habrcrawler.company_banners import parse_banners_html
 
 
-HTML_SWIPER = '''
+JSON_MULTIPLE_BANNERS = '''
+{
+  "widgetRefs": [
+    {
+      "type": "banner",
+      "data": {
+        "imageLinkUrl": "https://t.me/+nmxTyyOhV-ozYjUy"
+      }
+    },
+    {
+      "type": "banner",
+      "data": {
+        "imageLinkUrl": "https://t.me/anotherChannel"
+      }
+    }
+  ]
+}
+'''
+
+JSON_SINGLE_BANNER = '''
+{
+  "widgetRefs": [
+    {
+      "type": "banner",
+      "data": {
+        "imageLinkUrl": "https://t.me/singleChannel"
+      }
+    }
+  ]
+}
+'''
+
+JSON_NO_BANNER = '{"widgetRefs": []}'
+
+JSON_MISSING_HREF = '''
+{
+  "widgetRefs": [
+    {
+      "type": "banner",
+      "data": {}
+    },
+    {
+      "type": "banner",
+      "data": {
+        "imageLinkUrl": "https://t.me/validChannel"
+      }
+    }
+  ]
+}
+'''
+
+HTML_FALLBACK = '''
+<!DOCTYPE html>
+<html><body>
 <div class="swiper-wrapper">
     <a class="tm-widget-banner-content__image-wrapper"
-       href="https://t.me/+nmxTyyOhV-ozYjUy">
+       href="https://t.me/fallbackChannel">
         <img alt="" class="tm-widget-banner-content__image"
-             src="//habrastorage.org/getpro/habr/widget/6ba/2ac/0d7/6ba2ac0d76e059ad282b6cb1f9af45d7.jpg">
-    </a>
-    <a class="tm-widget-banner-content__image-wrapper"
-       href="https://t.me/anotherChannel">
-        <img alt="" class="tm-widget-banner-content__image"
-             src="//habrastorage.org/getpro/habr/widget/aaa/bbb/ccc/aaabbbccc.jpg">
+             src="//habrastorage.org/getpro/habr/widget/fallback.jpg">
     </a>
 </div>
+</body></html>
 '''
 
 
-HTML_SINGLE_BANNER = '''
-<div class="tm-widget-banner-content">
-    <a class="tm-widget-banner-content__image-wrapper"
-       href="https://t.me/singleChannel">
-        <img alt="" class="tm-widget-banner-content__image"
-             src="//habrastorage.org/getpro/habr/widget/single.jpg">
-    </a>
-</div>
-'''
-
-
-HTML_NO_BANNER = '''
-<div class="some-other-content">
-    <p>No banners here</p>
-</div>
-'''
-
-
-HTML_EMPTY_SWIPER = '''
-<div class="swiper-wrapper">
-</div>
-'''
-
-
-HTML_MISSING_HREF = '''
-<div class="swiper-wrapper">
-    <a class="tm-widget-banner-content__image-wrapper">
-        <img alt="" class="tm-widget-banner-content__image"
-             src="//habrastorage.org/getpro/habr/widget/missing.jpg">
-    </a>
-    <a class="tm-widget-banner-content__image-wrapper"
-       href="https://t.me/validChannel">
-        <img alt="" class="tm-widget-banner-content__image"
-             src="//habrastorage.org/getpro/habr/widget/valid.jpg">
-    </a>
-</div>
-'''
-
-
-def test_parse_swiper_multiple_banners():
-    links = parse_banners_html(HTML_SWIPER)
+def test_parse_multiple_banners():
+    links = parse_banners_html(JSON_MULTIPLE_BANNERS)
     assert len(links) == 2
     assert links[0] == {'href': 'https://t.me/+nmxTyyOhV-ozYjUy'}
     assert links[1] == {'href': 'https://t.me/anotherChannel'}
 
 
-def test_parse_single_banner_fallback():
-    links = parse_banners_html(HTML_SINGLE_BANNER)
+def test_parse_single_banner():
+    links = parse_banners_html(JSON_SINGLE_BANNER)
     assert len(links) == 1
     assert links[0] == {'href': 'https://t.me/singleChannel'}
 
 
 def test_parse_no_banner():
-    links = parse_banners_html(HTML_NO_BANNER)
+    links = parse_banners_html(JSON_NO_BANNER)
     assert links == []
-
-
-def test_parse_empty_swiper():
-    links = parse_banners_html(HTML_EMPTY_SWIPER)
-    assert links == []
+    assert parse_banners_html('{}') == []
+    assert parse_banners_html('') == []
 
 
 def test_parse_missing_href():
-    links = parse_banners_html(HTML_MISSING_HREF)
+    links = parse_banners_html(JSON_MISSING_HREF)
     assert len(links) == 1
     assert links[0] == {'href': 'https://t.me/validChannel'}
 
 
 def test_parse_deduplicates_hrefs():
-    html = '''
-    <div class="swiper-wrapper">
-        <a class="tm-widget-banner-content__image-wrapper"
-           href="https://t.me/dup">
-            <img alt="" class="tm-widget-banner-content__image"
-                 src="//habrastorage.org/getpro/habr/widget/1.jpg">
-        </a>
-        <a class="tm-widget-banner-content__image-wrapper"
-           href="https://t.me/dup">
-            <img alt="" class="tm-widget-banner-content__image"
-                 src="//habrastorage.org/getpro/habr/widget/2.jpg">
-        </a>
-    </div>
+    json_data = '''
+    {
+      "widgetRefs": [
+        {"type": "banner", "data": {"imageLinkUrl": "https://t.me/dup"}},
+        {"type": "banner", "data": {"imageLinkUrl": "https://t.me/dup"}}
+      ]
+    }
     '''
-    links = parse_banners_html(html)
+    links = parse_banners_html(json_data)
     assert len(links) == 1
     assert links[0] == {'href': 'https://t.me/dup'}
+
+
+def test_parse_html_fallback():
+    links = parse_banners_html(HTML_FALLBACK)
+    assert len(links) == 1
+    assert links[0] == {'href': 'https://t.me/fallbackChannel'}
 
 
 def test_merge_banner_links_appends_new():
@@ -137,14 +144,18 @@ def test_merge_banner_links_appends_new():
             result = asyncio.get_event_loop().run_until_complete(
                 company_banners._merge_banner_links(
                     'testco',
-                    [{'href': 'https://t.me/new'}]
+                    [
+                        {'href': 'https://t.me/new1'},
+                        {'href': 'https://t.me/new2'}
+                    ]
                 )
             )
             assert result is True
             assert company_banners._last_merged == [
                 {'href': 'https://example.com', 'title': 'Example'},
                 {'href': 'https://t.me/old', 'title': 'Old'},
-                {'href': 'https://t.me/new'},
+                {'href': 'https://t.me/new1'},
+                {'href': 'https://t.me/new2'},
             ]
 
 

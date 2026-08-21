@@ -223,10 +223,13 @@ async def post_2xx(f, url, ridealong, priority, host_geoip, json_log, crawler):
     html_types = set(('text/html', '', 'application/xhtml+xml'))
     html_types.add('')  # no content type
     html_types.add('*/*')  # mildly common in the wild, whatwg says we should sniff in this case
+    
+    # Allow application/json for API endpoints like the widgets API
+    allowed_types = html_types | {'application/json'}
 
-    if content_type not in html_types:
+    if content_type not in allowed_types:
         # XXX sniff the type https://mimesniff.spec.whatwg.org/
-        json_log['comment'] = 'not an html content type'
+        json_log['comment'] = 'not an html or json content type'
         #json_log['checksum'] = sha1  # XXX would like to log this
     else:
         if content_encoding != 'identity':

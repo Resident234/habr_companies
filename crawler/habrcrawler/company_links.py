@@ -31,18 +31,20 @@ from .urls import URL
 
 LOGGER = logging.getLogger(__name__)
 
-PROFILE_URL_TEMPLATE = 'https://habr.com/ru/companies/{company}/profile/'
+# Ссылки (виджеты) больше не отдаются в HTML страницы профиля.
+# Их нужно запрашивать через отдельный API endpoint с обязательными параметрами языка.
+LINKS_URL_TEMPLATE = 'https://habr.com/kek/v2/companies/{company}/widgets/?fl=ru&hl=ru'
 
 
 class HabrCompanyLinksSeedGenerator:
     '''
-    Lazily generates profile urls for every company in the database.
+    Lazily generates widgets API urls for every company in the database.
     '''
 
     def __init__(self, crawler):
         self.crawler = crawler
         self.template = config.read(
-            'Habr', 'ProfileUrlTemplate') or PROFILE_URL_TEMPLATE
+            'Habr', 'LinksUrlTemplate') or LINKS_URL_TEMPLATE
         self.companies = []
         self.index = 0
         self.exhausted = False
@@ -94,38 +96,76 @@ class HabrCompanyLinksSeedGenerator:
 
 def parse_links_html(html):
     '''
-    Parse a company profile page and return a list of link dicts.
+    Parse a company widgets API response and return a list of link dicts.
     Each dict contains: href, title, rel (list), target.
+    
+    Fallback: if the response is HTML instead of JSON (which happens when the 
+    API request is redirected or intercepted), it attempts to extract links 
+    from the HTML directly.
     '''
-    soup = BeautifulSoup(html, 'lxml')
-    # Try ul first, then div (some pages might use different container)
-    container = soup.find('ul', class_='tm-widget-links__list')
-    if container is None:
-        container = soup.find('div', class_='tm-widget-links__list')
-    if container is None:
-        return []
-
     links = []
-    for a in container.find_all('a', class_='tm-widget-links__link'):
-        href = (a.get('href') or '').strip()
-        if not href:
-            continue
-        title = (a.get('title') or '').strip()
-        if not title:
-            title = a.get_text(strip=True)
-        rel = a.get('rel', [])
-        if isinstance(rel, str):
-            rel = [rel]
-        elif not isinstance(rel, list):
-            rel = []
-        target = (a.get('target') or '').strip()
-        links.append({
-            'href': href,
-            'title': title,
-            'rel': rel,
-            'target': target,
-        })
-    return links
+    if not html or not html.strip():
+        return []
+        
+    try:
+        data = json.loads(html)
+        
+        widget_refs = data.get('widgetRefs', [])
+        if not widget_refs:
+            return []
+
+        for widget in widget_refs:
+            if widget.get('type') == 'links':
+                widget_data = widget.get('data', {})
+                for link in widget_data.get('links', []):
+                    href = (link.get('linkUrl') or '').strip()
+                    if not href:
+                        continue
+                    title = (link.get('title') or '').strip()
+                    
+                    links.append({
+                        'href': href,
+                        'title': title,
+                        'rel': ['nofollow', 'noreferrer'],
+                        'target': '_blank',
+                    })
+        return links
+        
+    except json.JSONDecodeError:
+        # Not JSON. If it looks like HTML, fallback to parsing HTML
+        if '<html' in html.lower() or '<!doctype html' in html.lower():
+            soup = BeautifulSoup(html, 'lxml')
+            
+            # 1. Попытка найти ссылки в старой верстке профиля
+            widgets = soup.find(class_='tm-company-widgets')
+            if widgets:
+                links_block = widgets.find(class_=lambda c: c and 'tm-block' in c.split(), attrs={'type': 'links'})
+                if links_block:
+                    for a in links_block.find_all('a', class_='tm-widget-links__link'):
+                        href = (a.get('href') or '').strip()
+                        if not href:
+                            continue
+                        title = (a.get('title') or '').strip()
+                        if not title:
+                            title = a.get_text(strip=True)
+                        rel = a.get('rel', [])
+                        if isinstance(rel, str):
+                            rel = [rel]
+                        elif not isinstance(rel, list):
+                            rel = []
+                        target = (a.get('target') or '').strip()
+                        links.append({
+                            'href': href,
+                            'title': title,
+                            'rel': rel,
+                            'target': target,
+                        })
+            return links
+            
+        # Not HTML either, or no links found
+        snippet = repr(html[:100])
+        LOGGER.warning('failed to decode JSON from widgets API and not HTML. Content: %s', snippet)
+        return []
 
 
 async def parse_and_save_links(html, company_code):
