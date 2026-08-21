@@ -197,7 +197,13 @@ export class CompanyApiClient {
             type: 'FETCH_REQUEST',
             url,
             method,
-            headers
+            // Бесплатный ngrok показывает браузерную HTML-страницу-предупреждение
+            // вместо ответа API. Этот заголовок отключает interstitial, чтобы
+            // эндпоинты статусов возвращали JSON и бейджи могли отрисоваться.
+            headers: {
+                ...headers,
+                'ngrok-skip-browser-warning': 'true'
+            }
         };
         if (body !== undefined) request.body = body;
 

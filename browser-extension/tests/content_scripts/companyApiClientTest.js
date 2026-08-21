@@ -33,6 +33,7 @@ describe('content_script/CompanyApiClient', () => {
         assert.match(requests[0].url, /\/company\/add\/yandex\//);
         assert.ok(requests[0].url.includes(encodeURIComponent('Яндекс & Co')));
         assert.strictEqual(requests[0].headers['X-API-Key'].length, 64);
+        assert.strictEqual(requests[0].headers['ngrok-skip-browser-warning'], 'true');
     });
 
     it('passes request bodies to the background handler', async () => {
