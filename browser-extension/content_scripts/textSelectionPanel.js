@@ -106,7 +106,8 @@ async function sendToAPI(endpoint, title) {
             method: 'POST',
             headers: {
                 'X-API-Key': CONFIG.API_KEY,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true'
             },
             body: JSON.stringify({ title })
         });
@@ -139,8 +140,21 @@ async function saveSelection(type) {
     }, 1500);
 }
 
+// Check if current page matches habr companies pattern
+export function isCompanyPage(currentHref = window.location.href) {
+    const url = new window.URL(currentHref);
+    const patternUrl = new window.URL(CONFIG.URL_PATTERN);
+    const patternPath = patternUrl.pathname.replace(/\*$/, '');
+    return url.origin === patternUrl.origin && url.pathname.startsWith(patternPath);
+}
+
 // Listen for text selection
 document.addEventListener('mouseup', (e) => {
+    if (!isCompanyPage()) {
+        hidePanel();
+        return;
+    }
+
     const selection = window.getSelection();
     const text = selection?.toString()?.trim();
 
