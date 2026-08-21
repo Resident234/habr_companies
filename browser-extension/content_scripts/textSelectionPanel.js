@@ -2,12 +2,13 @@ import { CONFIG } from '../config.js';
 
 let panel = null;
 let selectedText = '';
+const PANEL_GAP = 6;
 
 function createPanel() {
     panel = document.createElement('div');
     panel.id = 'habr-companies-selection-panel';
     panel.style.cssText = `
-        position: absolute;
+        position: fixed;
         display: none;
         gap: 6px;
         padding: 6px 10px;
@@ -73,19 +74,31 @@ function createPanel() {
     document.body.appendChild(panel);
 }
 
+export function calculatePanelPosition(rect, panelSize, gap = PANEL_GAP) {
+    let top = rect.top - panelSize.height - gap;
+
+    if (top < 0) {
+        top = rect.bottom + gap;
+    }
+
+    return {
+        left: rect.left + rect.width / 2 - panelSize.width / 2,
+        top
+    };
+}
+
 function showPanel(rect) {
     if (!panel) createPanel();
     selectedText = window.getSelection()?.toString()?.trim();
     if (!selectedText) return;
 
     panel.style.display = 'flex';
-    panel.style.left = rect.left + rect.width / 2 - panel.offsetWidth / 2 + 'px';
-    panel.style.top = rect.top - panel.offsetHeight - 10 + 'px';
-
-    // Adjust if panel goes off top
-    if (rect.top - panel.offsetHeight - 10 < 0) {
-        panel.style.top = rect.bottom + 10 + 'px';
-    }
+    const position = calculatePanelPosition(rect, {
+        width: panel.offsetWidth,
+        height: panel.offsetHeight
+    });
+    panel.style.left = position.left + 'px';
+    panel.style.top = position.top + 'px';
 }
 
 function hidePanel() {
