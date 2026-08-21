@@ -181,9 +181,15 @@ def parse_news_list_html(html):
                 comments_counter = habr_parse._to_int(
                     value_el.get_text(strip=True))
 
+        title = ''
+        title_el = article.find('h2', class_=lambda c: c and 'tm-title' in c.split())
+        if title_el:
+            span = title_el.find('span')
+            title = span.get_text(strip=True) if span else title_el.get_text(strip=True)
+
         news.append({
             'id': news_id,
-            'title': '',
+            'title': title,
             'stats_counter': stats_counter,
             'hubs': hubs,
             'score_counter': score_counter,

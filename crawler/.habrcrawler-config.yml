@@ -26,7 +26,7 @@ Habr:
   PostsUrlTemplate: 'https://habr.com/ru/companies/{company}/posts/'
 
   NewsMode: False     # True = crawl company news by numeric ID range
-  NewsPagesMode: False  # True = crawl company news lists (paginated)
+  NewsPagesMode: True  # True = crawl company news lists (paginated)
   NewsIdStart: 1
   NewsIdEnd: 10000000
   NewsUrlTemplate: 'https://habr.com/ru/companies/{company}/news/{news_id}/'
@@ -35,7 +35,7 @@ Habr:
   CategoriesMode: False  # True = crawl company profiles for categories
   LinksMode: False    # True = crawl company profiles for widget links
   LinksUrlTemplate: 'https://habr.com/kek/v2/companies/{company}/widgets/?fl=ru&hl=ru'
-  BannersMode: True  # True = crawl company profiles for banner links
+  BannersMode: False  # True = crawl company profiles for banner links
   BannersUrlTemplate: 'https://habr.com/kek/v2/companies/{company}/widgets/?fl=ru&hl=ru'
 
   SeedBatchSize: 20000

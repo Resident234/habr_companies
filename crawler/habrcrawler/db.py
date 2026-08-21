@@ -353,15 +353,23 @@ async def insert_news(news_id, title, stats_counter, company_code,
                     'INSERT INTO news '
                     '(id, title, stats_counter, company, '
                     ' score_counter, bookmarks_counter, comments_counter) '
-                    'VALUES (%s, %s, %s, %s, %s, %s, %s)',
+                    'VALUES (%s, %s, %s, %s, %s, %s, %s) AS new '
+                    'ON DUPLICATE KEY UPDATE '
+                    'title = new.title, '
+                    'stats_counter = new.stats_counter, '
+                    'score_counter = new.score_counter, '
+                    'bookmarks_counter = new.bookmarks_counter, '
+                    'comments_counter = new.comments_counter',
                     (news_id, title, stats_counter, company_code,
                      score_counter, bookmarks_counter, comments_counter))
-                stats.stats_sum('news inserted', 1)
+
+                if getattr(cur, 'rowcount', 1) == 1:
+                    stats.stats_sum('news inserted', 1)
+                else:
+                    stats.stats_sum('news updated', 1)
+                    LOGGER.info('updated existing news %s for company %s', news_id, company_code)
                 return True
             except Exception as e:
-                if 'Duplicate entry' in str(e):
-                    stats.stats_sum('news duplicate skipped', 1)
-                    return False
                 raise
 
 

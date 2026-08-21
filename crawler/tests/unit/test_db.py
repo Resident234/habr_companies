@@ -57,6 +57,49 @@ class FakePool:
 
 @pytest.mark.parametrize(
     'rowcount, expected_stat',
+    [(1, 'news inserted'), (2, 'news updated'), (0, 'news updated')],
+)
+def test_insert_news_upsert_logging(monkeypatch, rowcount, expected_stat):
+    import asyncio
+    cursor = FakeCursor(rowcount)
+    pool = FakePool(cursor)
+    stats_calls = []
+    log_calls = []
+
+    async def fake_init_pool():
+        return pool
+
+    monkeypatch.setattr(db, 'init_pool', fake_init_pool)
+    monkeypatch.setattr(
+        db.stats, 'stats_sum',
+        lambda name, value: stats_calls.append((name, value)))
+    monkeypatch.setattr(
+        db.LOGGER, 'info',
+        lambda msg, *args: log_calls.append((msg, args)))
+
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(db.insert_news(
+        news_id=123,
+        title='News Title',
+        stats_counter='3700',
+        company_code='oktell',
+        score_counter=24,
+        bookmarks_counter=2,
+        comments_counter=24,
+    ))
+
+    assert result is True
+    assert (expected_stat, 1) in stats_calls
+    
+    if rowcount != 1:
+        assert len(log_calls) == 1
+        assert log_calls[0][0] == 'updated existing news %s for company %s'
+        assert log_calls[0][1] == (123, 'oktell')
+    else:
+        assert len(log_calls) == 0
+
+@pytest.mark.parametrize(
+    'rowcount, expected_stat',
     [(1, 'articles inserted'), (2, 'articles updated'), (0, 'articles updated')],
 )
 def test_insert_article_upsert_updates_crawler_fields_only(
