@@ -79,3 +79,34 @@ describe('CommentBookmarkWatcher comment text extraction', () => {
         assert.strictEqual(await watcher._extractCommentText(comment), '');
     });
 });
+
+
+describe('CommentBookmarkWatcher long comment text', () => {
+    let watcher;
+
+    beforeEach('loadResources', done => {
+        EnvLoader.loadDomModel().then(() => {
+            document.body.innerHTML = '';
+            watcher = Object.create(CommentBookmarkWatcher.prototype);
+            done();
+        }).catch(done);
+    });
+
+    afterEach('releaseResources', () => {
+        EnvLoader.unloadDomModel();
+    });
+
+    it('preserves comment text longer than 500 characters', async () => {
+        const longText = 'Д'.repeat(1200);
+        const comment = document.createElement('div');
+        const body = document.createElement('div');
+        body.className = 'tm-comment__body-content';
+        body.textContent = longText;
+        comment.appendChild(body);
+
+        const extracted = await watcher._extractCommentText(comment);
+
+        assert.strictEqual(extracted, longText);
+        assert.ok(extracted.length > 500);
+    });
+});

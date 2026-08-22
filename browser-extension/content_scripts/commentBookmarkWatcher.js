@@ -130,7 +130,7 @@ export class CommentBookmarkWatcher {
 					? textElement.innerText
 					: textElement.textContent || '').trim();
 				if (text) {
-					return text.substring(0, 500);
+					return text;
 				}
 			}
 
