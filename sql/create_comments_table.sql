@@ -16,7 +16,7 @@ ON DUPLICATE KEY UPDATE title = s.title;
 -- Таблица закладок комментариев
 CREATE TABLE IF NOT EXISTS comments (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    text TEXT NOT NULL,
+    text MEDIUMTEXT NOT NULL,
     entity_code VARCHAR(50) NOT NULL,  -- 'news', 'articles', 'posts'
     entity_id INT NOT NULL,
     comment_id INT NOT NULL,           -- Habr's data-comment-body value
