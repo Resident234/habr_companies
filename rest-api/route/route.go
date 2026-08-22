@@ -51,7 +51,8 @@ var updatePostStatus = dbop.UpdatePostStatus
 const maxBatchIDs = 100
 
 // maxRequestBody ограничивает размер тела JSON-запросов (защита от DoS).
-const maxRequestBody = 1 << 20 // 1 MB
+// Лимит увеличен для сохранения длинных комментариев.
+const maxRequestBody = 8 << 20 // 8 MB
 
 func validateCode(code string) bool {
 	return len(code) > 0 && len(code) <= 255 && codeRegex.MatchString(code)
@@ -522,6 +523,8 @@ func addCommentHandler(w http.ResponseWriter, r *http.Request) {
 
 	operationStarted := time.Now()
 	var articleDuration time.Duration
+	var articleCreated bool
+	var err error
 
 	if req.EntityCode == "articles" {
 		req.CompanyCode = strings.TrimSpace(req.CompanyCode)
@@ -535,7 +538,7 @@ func addCommentHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		articleStarted := time.Now()
-		articleCreated, err := upsertArticle(req.EntityID, req.ArticleTitle, req.CompanyCode)
+		articleCreated, err = upsertArticle(req.EntityID, req.ArticleTitle, req.CompanyCode)
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, "database error")
 			return
@@ -555,20 +558,25 @@ func addCommentHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[comment] article and comment persisted: article_id=%d comment_id=%d article_duration_ms=%d comment_duration_ms=%d total_duration_ms=%d", req.EntityID, req.CommentID, articleDuration.Milliseconds(), time.Since(commentStarted).Milliseconds(), time.Since(operationStarted).Milliseconds())
 	}
 
+	responseBody := map[string]interface{}{
+		"text":        req.Text,
+		"entity_code": req.EntityCode,
+		"entity_id":   req.EntityID,
+		"comment_id":  req.CommentID,
+	}
+	if req.EntityCode == "articles" {
+		responseBody["article"] = map[string]interface{}{
+			"id":      req.EntityID,
+			"title":   req.ArticleTitle,
+			"company": req.CompanyCode,
+			"created": articleCreated,
+		}
+	}
+
 	if created {
-		respondJSON(w, http.StatusCreated, map[string]interface{}{
-			"text":        req.Text,
-			"entity_code": req.EntityCode,
-			"entity_id":   req.EntityID,
-			"comment_id":  req.CommentID,
-		})
+		respondJSON(w, http.StatusCreated, responseBody)
 	} else {
-		respondJSON(w, http.StatusOK, map[string]interface{}{
-			"text":        req.Text,
-			"entity_code": req.EntityCode,
-			"entity_id":   req.EntityID,
-			"comment_id":  req.CommentID,
-		})
+		respondJSON(w, http.StatusOK, responseBody)
 	}
 }
 

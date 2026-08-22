@@ -962,6 +962,28 @@ func TestHTTP_ArticleCommentUpsertsArticleBeforeComment(t *testing.T) {
 	if fmt.Sprint(calls) != fmt.Sprint(want) {
 		t.Fatalf("unexpected call order or arguments: got %v, want %v", calls, want)
 	}
+
+	var payload struct {
+		CommentID int64 `json:"comment_id"`
+		Article   *struct {
+			ID      int64  `json:"id"`
+			Title   string `json:"title"`
+			Company string `json:"company"`
+			Created bool   `json:"created"`
+		} `json:"article"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if payload.CommentID != 29901582 {
+		t.Fatalf("comment_id=%d, want 29901582", payload.CommentID)
+	}
+	if payload.Article == nil {
+		t.Fatal("article details are missing from response")
+	}
+	if payload.Article.ID != 663790 || payload.Article.Title != "Как появилась Луна, и что из этого вышло" || payload.Article.Company != "timeweb" || !payload.Article.Created {
+		t.Fatalf("unexpected article details: %+v", *payload.Article)
+	}
 }
 
 func TestHTTP_ArticleCommentRequiresMetadata(t *testing.T) {
@@ -987,5 +1009,33 @@ func TestHTTP_ArticleCommentRequiresMetadata(t *testing.T) {
 	}
 	if called {
 		t.Fatal("article upsert must not be called for invalid metadata")
+	}
+}
+
+func TestHTTP_LongCommentTextIsAccepted(t *testing.T) {
+	withAPIKey(t)
+
+	oldComment := upsertComment
+	t.Cleanup(func() { upsertComment = oldComment })
+	var savedText string
+	upsertComment = func(text, entityCode string, entityID, commentID int64) (bool, error) {
+		savedText = text
+		return true, nil
+	}
+
+	longText := strings.Repeat("Длинный комментарий. ", 200)
+	wantText := strings.TrimSpace(longText)
+	body := strings.NewReader(fmt.Sprintf(`{"text":%q,"entity_code":"posts","entity_id":1064400,"comment_id":29901582}`, longText))
+	req := httptest.NewRequest(http.MethodPost, "/comment/add", body)
+	req.Header.Set("X-API-Key", "test-key")
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	NewRouter().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if savedText != wantText {
+		t.Fatalf("comment text was changed: got %d bytes, want %d bytes", len(savedText), len(wantText))
 	}
 }
