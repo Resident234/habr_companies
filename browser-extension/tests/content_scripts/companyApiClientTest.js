@@ -44,4 +44,27 @@ describe('content_script/CompanyApiClient', () => {
         assert.strictEqual(requests[0].method, 'POST');
         assert.strictEqual(requests[0].body, JSON.stringify({ text: 'test', entity_code: 'posts', entity_id: 1, comment_id: 2 }));
     });
+
+    it('includes the REST validation reason when comment creation is rejected', async () => {
+        globalThis.chrome.runtime.sendMessage = async (request) => {
+            requests.push(request);
+            return {
+                ok: false,
+                status: 400,
+                body: JSON.stringify({ error: 'article_title is required for article comments' })
+            };
+        };
+
+        const client = new CompanyApiClient();
+        const result = await client.addComment({
+            text: 'test',
+            entity_code: 'articles',
+            entity_id: 663790,
+            comment_id: 2
+        });
+
+        assert.strictEqual(result.type, 'error');
+        assert.match(result.message, /status\[400\]/);
+        assert.match(result.message, /article_title is required for article comments/);
+    });
 });

@@ -296,6 +296,13 @@ export class CompanyApiClient {
         const url = `${baseUrl}/comment/add`;
 
         try {
+            console.log('[CompanyApiClient.addComment] Sending comment request:', {
+                entity_code: data.entity_code,
+                entity_id: data.entity_id,
+                comment_id: data.comment_id,
+                company_code: data.company_code,
+                article_title_present: Boolean(data.article_title)
+            });
             const response = await this._fetch(url, {
                 method: 'POST',
                 headers: {
@@ -307,12 +314,23 @@ export class CompanyApiClient {
 
             if (response.error) throw new Error(response.error);
 
-            if (!response.ok) {
-                return {
-                    message: `Ошибка добавления комментария: status[${response.status}]`,
-                    type: 'error'
-                };
-            }
+			if (!response.ok) {
+				let details = '';
+				try {
+					const payload = JSON.parse(response.body || '{}');
+					details = payload.error ? `, error[${payload.error}]` : '';
+				} catch (parseError) {
+					console.warn('[CompanyApiClient.addComment] Could not parse error response:', parseError);
+				}
+				console.error('[CompanyApiClient.addComment] API rejected comment:', {
+					status: response.status,
+					body: response.body
+				});
+				return {
+					message: `Ошибка добавления комментария: status[${response.status}]${details}`,
+					type: 'error'
+				};
+			}
 
             return {
                 message: `Комментарий добавлен успешно: id[${data.comment_id}]`,
