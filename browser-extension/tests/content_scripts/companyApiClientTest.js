@@ -45,6 +45,41 @@ describe('content_script/CompanyApiClient', () => {
         assert.strictEqual(requests[0].body, JSON.stringify({ text: 'test', entity_code: 'posts', entity_id: 1, comment_id: 2 }));
     });
 
+    it('shows the comment ID and newly created article details on success', async () => {
+        globalThis.chrome.runtime.sendMessage = async (request) => {
+            requests.push(request);
+            return {
+                ok: true,
+                status: 201,
+                body: JSON.stringify({
+                    comment_id: 29901582,
+                    article: {
+                        id: 663790,
+                        title: 'Как появилась Луна, и что из этого вышло',
+                        company: 'timeweb',
+                        created: true
+                    }
+                })
+            };
+        };
+
+        const client = new CompanyApiClient();
+        const result = await client.addComment({
+            text: 'Комментарий',
+            entity_code: 'articles',
+            entity_id: 663790,
+            comment_id: 29901582,
+            company_code: 'timeweb',
+            article_title: 'Как появилась Луна, и что из этого вышло'
+        });
+
+        assert.strictEqual(result.type, 'success');
+        assert.match(result.message, /Комментарий добавлен успешно: id\[29901582\]/);
+        assert.match(result.message, /Статья добавлена в БД: id\[663790\]/);
+        assert.match(result.message, /title\[Как появилась Луна, и что из этого вышло\]/);
+        assert.match(result.message, /company\[timeweb\]/);
+    });
+
     it('includes the REST validation reason when comment creation is rejected', async () => {
         globalThis.chrome.runtime.sendMessage = async (request) => {
             requests.push(request);

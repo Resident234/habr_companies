@@ -332,8 +332,20 @@ export class CompanyApiClient {
 				};
 			}
 
+            let payload = {};
+            try {
+                payload = JSON.parse(response.body || '{}');
+            } catch (parseError) {
+                console.warn('[CompanyApiClient.addComment] Could not parse success response:', parseError);
+            }
+
+            let message = `Комментарий добавлен успешно: id[${payload.comment_id || data.comment_id}]`;
+            if (payload.article && payload.article.created) {
+                message += `. Статья добавлена в БД: id[${payload.article.id}], title[${payload.article.title}], company[${payload.article.company}]`;
+            }
+
             return {
-                message: `Комментарий добавлен успешно: id[${data.comment_id}]`,
+                message,
                 type: 'success'
             };
         } catch (error) {
