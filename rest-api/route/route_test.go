@@ -229,8 +229,8 @@ func doGetArticleStatuses(t *testing.T, code, id, apiKey string, query string) *
 
 func newTestArticleStatuses() *dbop.ArticleStatuses {
 	return &dbop.ArticleStatuses{
-		ID:      1067190,
-		Company: "wirenboard",
+		ID:             1067190,
+		Company:        "wirenboard",
 		ActionDev:      &dbop.CompanyStatus{Code: "in_progress", Title: "В работе"},
 		ActionPost:     &dbop.CompanyStatus{Code: "done", Title: "Завершено"},
 		ActionComment:  &dbop.CompanyStatus{Code: "backlog", Title: "В бэклоге"},
@@ -923,5 +923,69 @@ func TestHTTP_UpdatePostStatus_NotFound(t *testing.T) {
 	rec := doPatch(t, "/post/statuses/k2tech/999/action_post/fwd", "test-key")
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHTTP_ArticleCommentUpsertsArticleBeforeComment(t *testing.T) {
+	withAPIKey(t)
+
+	var calls []string
+	oldArticle := upsertArticle
+	oldComment := upsertComment
+	t.Cleanup(func() {
+		upsertArticle = oldArticle
+		upsertComment = oldComment
+	})
+	upsertArticle = func(articleID int64, title, companyCode string) (bool, error) {
+		calls = append(calls, fmt.Sprintf("article:%d:%s:%s", articleID, title, companyCode))
+		return true, nil
+	}
+	upsertComment = func(text, entityCode string, entityID, commentID int64) (bool, error) {
+		calls = append(calls, fmt.Sprintf("comment:%s:%s:%d:%d", text, entityCode, entityID, commentID))
+		return true, nil
+	}
+
+	body := strings.NewReader(`{"text":"Комментарий","entity_code":"articles","entity_id":663790,"comment_id":29901582,"company_code":"timeweb","article_title":"Как появилась Луна, и что из этого вышло"}`)
+	req := httptest.NewRequest(http.MethodPost, "/comment/add", body)
+	req.Header.Set("X-API-Key", "test-key")
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	NewRouter().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rec.Code, rec.Body.String())
+	}
+	want := []string{
+		"article:663790:Как появилась Луна, и что из этого вышло:timeweb",
+		"comment:Комментарий:articles:663790:29901582",
+	}
+	if fmt.Sprint(calls) != fmt.Sprint(want) {
+		t.Fatalf("unexpected call order or arguments: got %v, want %v", calls, want)
+	}
+}
+
+func TestHTTP_ArticleCommentRequiresMetadata(t *testing.T) {
+	withAPIKey(t)
+
+	oldArticle := upsertArticle
+	t.Cleanup(func() { upsertArticle = oldArticle })
+	called := false
+	upsertArticle = func(articleID int64, title, companyCode string) (bool, error) {
+		called = true
+		return true, nil
+	}
+
+	body := strings.NewReader(`{"text":"Комментарий","entity_code":"articles","entity_id":663790,"comment_id":29901582}`)
+	req := httptest.NewRequest(http.MethodPost, "/comment/add", body)
+	req.Header.Set("X-API-Key", "test-key")
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	NewRouter().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if called {
+		t.Fatal("article upsert must not be called for invalid metadata")
 	}
 }

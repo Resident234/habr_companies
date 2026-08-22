@@ -75,6 +75,32 @@ func UpsertCompany(code, title string) (created bool, err error) {
 	return rows == 1, nil
 }
 
+// UpsertArticle добавляет или обновляет статью по внешнему Habr ID.
+// ID статьи передаётся явно, чтобы он совпадал с ID в URL Habr.
+func UpsertArticle(articleID int64, title, companyCode string) (created bool, err error) {
+	if db == nil {
+		return false, fmt.Errorf("database not initialized")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	res, err := db.ExecContext(ctx,
+		"INSERT INTO articles (id, title, company) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE title = ?, company = ?",
+		articleID, title, companyCode, title, companyCode,
+	)
+	if err != nil {
+		return false, err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	// Для INSERT ... ON DUPLICATE KEY UPDATE: 1 — новая строка,
+	// 2 — обновлена существующая, 0 — данные уже совпадают.
+	return rows == 1, nil
+}
+
 // UpsertCategory добавляет или обновляет отрасль. Возвращает true, если запись создана.
 func UpsertCategory(code, title string) (created bool, err error) {
 	if db == nil {

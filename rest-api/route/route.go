@@ -1,11 +1,13 @@
-﻿package route
+package route
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	dbop "github.com/Resident234/habr_companies/rest-api/dbOp"
@@ -47,6 +49,7 @@ var updatePostStatus = dbop.UpdatePostStatus
 
 // maxBatchIDs должно совпадать с лимитом в dbOp.GetPostsStatuses.
 const maxBatchIDs = 100
+
 // maxRequestBody ограничивает размер тела JSON-запросов (защита от DoS).
 const maxRequestBody = 1 << 20 // 1 MB
 
@@ -400,7 +403,7 @@ type quickAddRequest struct {
 
 func quickAddCompany(w http.ResponseWriter, r *http.Request) {
 	var req quickAddRequest
-	if err := json.NewDecoder(http.MaxBytesReader(w,r.Body,maxRequestBody)).Decode(&req); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBody)).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -436,7 +439,7 @@ var upsertCategory = dbop.UpsertCategory
 
 func quickAddCategory(w http.ResponseWriter, r *http.Request) {
 	var req quickAddRequest
-	if err := json.NewDecoder(http.MaxBytesReader(w,r.Body,maxRequestBody)).Decode(&req); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBody)).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -468,11 +471,16 @@ func quickAddCategory(w http.ResponseWriter, r *http.Request) {
 
 // CommentAddRequest — структура запроса для добавления закладки комментария.
 type CommentAddRequest struct {
-	Text        string `json:"text"`
-	EntityCode  string `json:"entity_code"`
-	EntityID    int64  `json:"entity_id"`
-	CommentID   int64  `json:"comment_id"`
+	Text         string `json:"text"`
+	EntityCode   string `json:"entity_code"`
+	EntityID     int64  `json:"entity_id"`
+	CommentID    int64  `json:"comment_id"`
+	CompanyCode  string `json:"company_code,omitempty"`
+	ArticleTitle string `json:"article_title,omitempty"`
 }
+
+// upsertArticle вызывается из обработчика; подменяется в тестах.
+var upsertArticle = dbop.UpsertArticle
 
 // upsertComment вызывается из обработчика; подменяется в тестах.
 var upsertComment = dbop.UpsertComment
@@ -484,7 +492,7 @@ var deleteComment = dbop.DeleteComment
 // Принимает JSON: {"text": "...", "entity_code": "posts", "entity_id": 1064400, "comment_id": 29901582}
 func addCommentHandler(w http.ResponseWriter, r *http.Request) {
 	var req CommentAddRequest
-	if err := json.NewDecoder(http.MaxBytesReader(w,r.Body,maxRequestBody)).Decode(&req); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBody)).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -512,25 +520,54 @@ func addCommentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	operationStarted := time.Now()
+	var articleDuration time.Duration
+
+	if req.EntityCode == "articles" {
+		req.CompanyCode = strings.TrimSpace(req.CompanyCode)
+		req.ArticleTitle = strings.TrimSpace(req.ArticleTitle)
+		if !validateCode(req.CompanyCode) {
+			respondError(w, http.StatusBadRequest, "company_code is required for article comments")
+			return
+		}
+		if !validateTitle(req.ArticleTitle) {
+			respondError(w, http.StatusBadRequest, "article_title is required for article comments")
+			return
+		}
+		articleStarted := time.Now()
+		articleCreated, err := upsertArticle(req.EntityID, req.ArticleTitle, req.CompanyCode)
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, "database error")
+			return
+		}
+		articleDuration = time.Since(articleStarted)
+		log.Printf("[comment] article upserted before comment: article_id=%d company=%s title=%q created=%t duration_ms=%d", req.EntityID, req.CompanyCode, req.ArticleTitle, articleCreated, articleDuration.Milliseconds())
+	}
+
+	commentStarted := time.Now()
 	created, err := upsertComment(req.Text, req.EntityCode, req.EntityID, req.CommentID)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "database error")
 		return
 	}
 
+	if req.EntityCode == "articles" {
+		log.Printf("[comment] article and comment persisted: article_id=%d comment_id=%d article_duration_ms=%d comment_duration_ms=%d total_duration_ms=%d", req.EntityID, req.CommentID, articleDuration.Milliseconds(), time.Since(commentStarted).Milliseconds(), time.Since(operationStarted).Milliseconds())
+	}
+
 	if created {
 		respondJSON(w, http.StatusCreated, map[string]interface{}{
-			"text":         req.Text,
-			"entity_code":  req.EntityCode,
-			"entity_id":    req.EntityID,
-			"comment_id":   req.CommentID,
+			"text":        req.Text,
+			"entity_code": req.EntityCode,
+			"entity_id":   req.EntityID,
+			"comment_id":  req.CommentID,
 		})
 	} else {
 		respondJSON(w, http.StatusOK, map[string]interface{}{
-			"text":         req.Text,
-			"entity_code":  req.EntityCode,
-			"entity_id":    req.EntityID,
-			"comment_id":   req.CommentID,
+			"text":        req.Text,
+			"entity_code": req.EntityCode,
+			"entity_id":   req.EntityID,
+			"comment_id":  req.CommentID,
 		})
 	}
 }
@@ -558,7 +595,7 @@ func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, http.StatusOK, map[string]interface{}{
-		"deleted": true,
+		"deleted":    true,
 		"comment_id": commentID,
 	})
 }
