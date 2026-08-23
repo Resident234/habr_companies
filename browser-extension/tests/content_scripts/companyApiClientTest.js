@@ -36,6 +36,24 @@ describe('content_script/CompanyApiClient', () => {
         assert.strictEqual(requests[0].headers['ngrok-skip-browser-warning'], 'true');
     });
 
+    it('falls back to the local API when the configured endpoint returns 404', async () => {
+        globalThis.chrome.runtime.sendMessage = async (request) => {
+            requests.push(request);
+            if (requests.length === 1) {
+                return { ok: false, status: 404, body: 'Not Found' };
+            }
+            return { ok: true, status: 201, body: '{}' };
+        };
+
+        const client = new CompanyApiClient();
+        const result = await client.sendCompany('zextras', 'Zextras');
+
+        assert.strictEqual(result.type, 'success');
+        assert.strictEqual(requests.length, 2);
+        assert.match(requests[0].url, /rippling-overwrite-attire\.ngrok-free\.dev\/company\/add\/zextras\/Zextras/);
+        assert.match(requests[1].url, /127\.0\.0\.1:8080\/company\/add\/zextras\/Zextras/);
+    });
+
     it('passes request bodies to the background handler', async () => {
         const client = new CompanyApiClient();
         await client.addComment({ text: 'test', entity_code: 'posts', entity_id: 1, comment_id: 2 });
