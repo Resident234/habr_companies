@@ -83,6 +83,12 @@ function Find-NgrokExe {
     foreach ($p in @("$env:USERPROFILE\scoop\shims\ngrok.exe", "$env:LOCALAPPDATA\ngrok\ngrok.exe", "C:\ngrok\ngrok.exe", "$env:TEMP\ngrok\ngrok.exe")) {
         if (Test-Path $p) { return $p }
     }
+    $wingetRoot = Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Packages"
+    if (Test-Path $wingetRoot) {
+        $fromWinget = Get-ChildItem -Path $wingetRoot -Recurse -File -Filter "ngrok.exe" -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+        if ($fromWinget) { return $fromWinget.FullName }
+    }
     return $null
 }
 function Download-Ngrok {
@@ -97,13 +103,43 @@ function Download-Ngrok {
     Write-Host "ngrok extracted to: $exe"
     Write-Output $exe
 }
+function Get-NgrokVersion {
+    param([string]$Executable, [string]$ConfigPath)
+    $versionOutput = (& $Executable version --config $ConfigPath 2>$null | Out-String).Trim()
+    $match = [regex]::Match($versionOutput, 'ngrok version (?<version>\d+\.\d+\.\d+)')
+    if (-not $match.Success) { return $null }
+    try { return [version]$match.Groups['version'].Value } catch { return $null }
+}
+
 $NgrokExe = Find-NgrokExe
 if (-not $NgrokExe) { $NgrokExe = Download-Ngrok }
 Write-Output "Using ngrok: $NgrokExe"
 
 # - 4. Configure ngrok authtoken -
-Write-Output "Configuring ngrok authtoken..."
-& $NgrokExe config add-authtoken $AuthToken 2>$null
+# Use a dedicated config because older ngrok installations may leave an incompatible
+# versioned config in %LOCALAPPDATA%\ngrok or %USERPROFILE%\.ngrok2.
+$NgrokConfig = Join-Path $env:TEMP "habr_companies_ngrok.yml"
+Write-Output "Configuring ngrok authtoken in: $NgrokConfig"
+& $NgrokExe config add-authtoken $AuthToken --config $NgrokConfig 2>$null
+if ($LASTEXITCODE -ne 0) { Write-Error "ngrok authtoken configuration failed"; exit 1 }
+
+$minimumNgrokVersion = [version]'3.20.0'
+$ngrokVersion = Get-NgrokVersion -Executable $NgrokExe -ConfigPath $NgrokConfig
+if ($null -eq $ngrokVersion) {
+    Write-Error "ngrok executable could not be started or its version could not be determined"
+    exit 1
+}
+if ($ngrokVersion -lt $minimumNgrokVersion) {
+    Write-Output "ngrok Agent $ngrokVersion is older than required $minimumNgrokVersion; attempting self-update."
+    & $NgrokExe update --config $NgrokConfig 2>$null
+    $ngrokVersion = Get-NgrokVersion -Executable $NgrokExe -ConfigPath $NgrokConfig
+}
+if ($null -eq $ngrokVersion -or $ngrokVersion -lt $minimumNgrokVersion) {
+    $actualVersion = if ($ngrokVersion) { $ngrokVersion } else { 'unknown' }
+    Write-Error "ngrok Agent $actualVersion is unsupported; version $minimumNgrokVersion or newer is required. Set NGROK_EXE to a current trusted ngrok.exe."
+    exit 1
+}
+Write-Output "Using ngrok Agent $ngrokVersion"
 
 # - 5. Stop previous instances -
 Write-Output "Stopping previous instances..."
@@ -169,7 +205,7 @@ Trim-LogBytes $ngrokLog (512 * 1024)
 Trim-LogBytes $ngrokErrLog (128 * 1024)
 
 $ngrokProcess = Start-Process -FilePath $NgrokExe `
-    -ArgumentList "http $LocalPort --log=stdout --log-format=json --log-level=info" `
+    -ArgumentList @("--config", $NgrokConfig, "http", $LocalPort, "--log=stdout", "--log-format=json", "--log-level=info") `
     -WindowStyle Hidden `
     -RedirectStandardOutput $ngrokLog `
     -RedirectStandardError $ngrokErrLog `
@@ -211,12 +247,12 @@ Write-Output "  SERVICE IS LIVE"
 Write-Output "============================================"
 Write-Output "  Local:     http://localhost:$LocalPort"
 Write-Output "  Public:    $publicUrl"
-Write-Output "  API Key:   $ApiKey"
+Write-Output "  API Key:   loaded from .env (not printed)"
 Write-Output "  ngrok UI:  http://localhost:4040"
 Write-Output "============================================"
 Write-Output ""
-Write-Output "Example:"
-Write-Output "  curl -X POST ""$publicUrl/company/add/test/%D1%82%D0%B5%D1%81%D1%82"" -H ""X-API-Key: $ApiKey"""
+Write-Output "Example (replace the placeholder with your key):"
+Write-Output "  curl -X POST ""$publicUrl/company/add/test/%D1%82%D0%B5%D1%81%D1%82"" -H ""X-API-Key: <COMPANY_API_KEY>"""
 Write-Output ""
 Write-Output "Press Ctrl+C to stop both services, or close this window."
 
