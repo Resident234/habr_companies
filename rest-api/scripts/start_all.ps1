@@ -113,19 +113,30 @@ Start-Sleep -Seconds 1
 
 # - 6. Locate or build rest-api.exe -
 $RestApiExe = Join-Path $ProjectDir "rest-api.exe"
-if (-not (Test-Path $RestApiExe)) {
+$needsBuild = -not (Test-Path $RestApiExe)
+if (-not $needsBuild) {
+    $exeTime = (Get-Item $RestApiExe).LastWriteTimeUtc
+    $sourceFiles = Get-ChildItem -Path $ProjectDir -Recurse -File -Include *.go,go.mod,go.sum |
+        Where-Object { $_.FullName -notmatch '[\\/](vendor|\.git)[\\/]' }
+    if ($sourceFiles | Where-Object { $_.LastWriteTimeUtc -gt $exeTime }) {
+        $needsBuild = $true
+        Write-Output "Go sources or module files are newer than rest-api.exe; rebuilding."
+    }
+}
+if ($needsBuild) {
     Write-Output "Building rest-api.exe..."
     $goCmd = (Get-Command "go.exe" -ErrorAction SilentlyContinue).Source
     if (-not $goCmd) { Write-Error "Go not found. Install Go or place rest-api.exe in $ProjectDir"; exit 1 }
     $prev = Get-Location
     Set-Location $ProjectDir
     & $goCmd build -o "$RestApiExe" ./operate
-    if ($LASTEXITCODE -ne 0) { Write-Error "go build failed"; exit 1 }
+    $buildExitCode = $LASTEXITCODE
     Set-Location $prev
+    if ($buildExitCode -ne 0) { Write-Error "go build failed"; exit 1 }
     if (-not (Test-Path $RestApiExe)) { Write-Error "rest-api.exe was not created"; exit 1 }
     Write-Output "Built: $RestApiExe"
 } else {
-    Write-Output "Found: $RestApiExe"
+    Write-Output "Found up-to-date: $RestApiExe"
 }
 
 # - 7. Start rest-api -
