@@ -9,175 +9,70 @@ export class CompanyApiClient {
     async sendCompany(code, title) {
         console.log('[CompanyApiClient.sendCompany] Called with code:', code, 'title:', title);
 
-        const baseUrls = await this._getCompanyBaseUrls();
+        const baseUrl = await this._getBaseUrl();
         const encodedCode = encodeURIComponent(code);
         const encodedTitle = encodeURIComponent(title);
-        let primaryStatus = null;
-        let primaryUrl = null;
+        const url = `${baseUrl}/company/add/${encodedCode}/${encodedTitle}`;
 
-        for (let index = 0; index < baseUrls.length; index++) {
-            const baseUrl = baseUrls[index];
-            const url = `${baseUrl}/company/add/${encodedCode}/${encodedTitle}`;
-            const isLastAttempt = index === baseUrls.length - 1;
-            primaryUrl = primaryUrl || url;
+        console.log('[CompanyApiClient.sendCompany] Base URL:', baseUrl);
+        console.log('[CompanyApiClient.sendCompany] Full request URL:', url);
+        console.log('[CompanyApiClient.sendCompany] API Key (first 4 chars):', CONFIG.API_KEY.substring(0, 4) + '...');
+        console.log('[CompanyApiClient.sendCompany] Sending POST request via background...');
 
-            console.log('[CompanyApiClient.sendCompany] Base URL:', baseUrl);
-            console.log('[CompanyApiClient.sendCompany] Full request URL:', url);
-            console.log('[CompanyApiClient.sendCompany] API Key (first 4 chars):', CONFIG.API_KEY.substring(0, 4) + '...');
-            console.log('[CompanyApiClient.sendCompany] Sending POST request via background...');
+        try {
+            const response = await this._fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-API-Key': CONFIG.API_KEY,
+                    'Content-Type': 'application/json'
+                },
+            });
 
-            try {
-                const response = await this._fetch(url, {
-                    method: 'POST',
-                    headers: {
-                            'X-API-Key': CONFIG.API_KEY,
-                            'Content-Type': 'application/json'
-                    },
-                });
+            console.log('[CompanyApiClient.sendCompany] Response status:', response.status);
+            console.log('[CompanyApiClient.sendCompany] Response ok:', response.ok);
+            console.log('[CompanyApiClient.sendCompany] Response body:', response.body);
 
-                console.log('[CompanyApiClient.sendCompany] Response status:', response.status);
-                console.log('[CompanyApiClient.sendCompany] Response ok:', response.ok);
-                console.log('[CompanyApiClient.sendCompany] Response body:', response.body);
+            if (response.error) throw new Error(response.error);
 
-                if (response.error) throw new Error(response.error);
-
-                if (response.ok) {
-                    return {
-                        message: `Компания добавлена успешно: title[${title}], code[${code}]`,
-                        type: 'success'
-                    };
-                }
-
-                primaryStatus = primaryStatus || response.status;
-                if (!isLastAttempt && (response.status === 404 || response.status >= 500)) {
-                    console.warn('[CompanyApiClient.sendCompany] Primary API is unavailable, trying local API fallback');
-                    continue;
-                }
-
+            if (response.ok) {
                 return {
-                    message: `Ошибка добавления компании: title[${title}], code[${code}], status[${response.status}]`,
-                    type: 'error'
+                    message: `Компания добавлена успешно: title[${title}], code[${code}]`,
+                    type: 'success'
                 };
-            } catch (error) {
-                console.error('[CompanyApiClient.sendCompany] Fetch failed:', error);
-                if (!isLastAttempt) {
-                    console.warn('[CompanyApiClient.sendCompany] Trying local API fallback after transport failure');
-                    continue;
-                }
-
-                if (primaryStatus !== null) {
-                    return {
-                        message: `Ошибка добавления компании: title[${title}], code[${code}], status[${primaryStatus}]`,
-                        type: 'error'
-                    };
-                }
-                throw new Error(`Could not send query for company "${code}" to ${primaryUrl}`);
             }
-        }
 
-        return {
-            message: `Ошибка добавления компании: title[${title}], code[${code}], status[${primaryStatus}]`,
-            type: 'error'
-        };
+            return {
+                message: `Ошибка добавления компании: title[${title}], code[${code}], status[${response.status}]`,
+                type: 'error'
+            };
+        } catch (error) {
+            console.error('[CompanyApiClient.sendCompany] Fetch failed:', error);
+            throw new Error(`Could not send query for company "${code}" to ${url}`);
+        }
     }
 
     async getStatuses(code) {
         console.log('[CompanyApiClient.getStatuses] Called with code:', code);
-
-        const baseUrl = await this._getBaseUrl();
-        const url = `${baseUrl}/company/statuses/${encodeURIComponent(code)}`;
-        console.log('[CompanyApiClient.getStatuses] Full request URL:', url);
-
-        try {
-            const response = await this._fetch(url, {
-                method: 'GET',
-                headers: {
-                        'X-API-Key': CONFIG.API_KEY,
-                        'Content-Type': 'application/json'
-                },
-            });
-
-            console.log('[CompanyApiClient.getStatuses] Response status:', response.status);
-            console.log('[CompanyApiClient.getStatuses] Response body:', response.body);
-
-            if (response.error) throw new Error(response.error);
-
-            if (!response.ok) {
-                console.warn('[CompanyApiClient.getStatuses] Non-ok response:', response.status);
-                return null;
-            }
-
-            return JSON.parse(response.body);
-        } catch (error) {
-            console.error('[CompanyApiClient.getStatuses] Fetch failed:', error);
-            return null;
-        }
+        return this._getJson(
+            `/company/statuses/${encodeURIComponent(code)}`,
+            'CompanyApiClient.getStatuses'
+        );
     }
 
     async getArticleStatuses(companyCode, articleId) {
         console.log('[CompanyApiClient.getArticleStatuses] Called with companyCode:', companyCode, 'articleId:', articleId);
-
-        const baseUrl = await this._getBaseUrl();
-        const url = `${baseUrl}/article/statuses/${encodeURIComponent(companyCode)}/${encodeURIComponent(articleId)}`;
-        console.log('[CompanyApiClient.getArticleStatuses] Full request URL:', url);
-
-        try {
-            const response = await this._fetch(url, {
-                method: 'GET',
-                headers: {
-                        'X-API-Key': CONFIG.API_KEY,
-                        'Content-Type': 'application/json'
-                },
-            });
-
-            console.log('[CompanyApiClient.getArticleStatuses] Response status:', response.status);
-            console.log('[CompanyApiClient.getArticleStatuses] Response body:', response.body);
-
-            if (response.error) throw new Error(response.error);
-
-            if (!response.ok) {
-                console.warn('[CompanyApiClient.getArticleStatuses] Non-ok response:', response.status);
-                return null;
-            }
-
-            return JSON.parse(response.body);
-        } catch (error) {
-            console.error('[CompanyApiClient.getArticleStatuses] Fetch failed:', error);
-            return null;
-        }
+        return this._getJson(
+            `/article/statuses/${encodeURIComponent(companyCode)}/${encodeURIComponent(articleId)}`,
+            'CompanyApiClient.getArticleStatuses'
+        );
     }
 
     async getNewsStatuses(companyCode, newsId) {
         console.log('[CompanyApiClient.getNewsStatuses] Called with companyCode:', companyCode, 'newsId:', newsId);
-
-        const baseUrl = await this._getBaseUrl();
-        const url = `${baseUrl}/news/statuses/${encodeURIComponent(companyCode)}/${encodeURIComponent(newsId)}`;
-        console.log('[CompanyApiClient.getNewsStatuses] Full request URL:', url);
-
-        try {
-            const response = await this._fetch(url, {
-                method: 'GET',
-                headers: {
-                        'X-API-Key': CONFIG.API_KEY,
-                        'Content-Type': 'application/json'
-                },
-            });
-
-            console.log('[CompanyApiClient.getNewsStatuses] Response status:', response.status);
-            console.log('[CompanyApiClient.getNewsStatuses] Response body:', response.body);
-
-            if (response.error) throw new Error(response.error);
-
-            if (!response.ok) {
-                console.warn('[CompanyApiClient.getNewsStatuses] Non-ok response:', response.status);
-                return null;
-            }
-
-            return JSON.parse(response.body);
-        } catch (error) {
-            console.error('[CompanyApiClient.getNewsStatuses] Fetch failed:', error);
-            return null;
-        }
+        return this._getJson(
+            `/news/statuses/${encodeURIComponent(companyCode)}/${encodeURIComponent(newsId)}`,
+            'CompanyApiClient.getNewsStatuses'
+        );
     }
 
     async getPostsStatuses(companyCode, postIds) {
@@ -188,33 +83,44 @@ export class CompanyApiClient {
             return null;
         }
 
-        const baseUrl = await this._getBaseUrl();
         const idsParam = postIds.map(id => encodeURIComponent(String(id))).join(',');
-        const url = `${baseUrl}/posts/statuses/${encodeURIComponent(companyCode)}?ids=${idsParam}`;
-        console.log('[CompanyApiClient.getPostsStatuses] Full request URL:', url);
+        return this._getJson(
+            `/posts/statuses/${encodeURIComponent(companyCode)}?ids=${idsParam}`,
+            'CompanyApiClient.getPostsStatuses'
+        );
+    }
+
+    async _getJson(path, logLabel) {
+        const baseUrl = await this._getBaseUrl();
+        const url = `${baseUrl}${path}`;
+        console.log(`[${logLabel}] Full request URL:`, url);
 
         try {
             const response = await this._fetch(url, {
                 method: 'GET',
                 headers: {
-                        'X-API-Key': CONFIG.API_KEY,
-                        'Content-Type': 'application/json'
+                    'X-API-Key': CONFIG.API_KEY,
+                    'Content-Type': 'application/json'
                 },
             });
 
-            console.log('[CompanyApiClient.getPostsStatuses] Response status:', response.status);
-            console.log('[CompanyApiClient.getPostsStatuses] Response body:', response.body);
+            if (!response) {
+                throw new Error('Background fetch returned no response');
+            }
+
+            console.log(`[${logLabel}] Response status:`, response.status);
+            console.log(`[${logLabel}] Response body:`, response.body);
 
             if (response.error) throw new Error(response.error);
 
             if (!response.ok) {
-                console.warn('[CompanyApiClient.getPostsStatuses] Non-ok response:', response.status);
+                console.warn(`[${logLabel}] Non-ok response:`, response.status);
                 return null;
             }
 
             return JSON.parse(response.body);
         } catch (error) {
-            console.error('[CompanyApiClient.getPostsStatuses] Fetch failed:', error);
+            console.error(`[${logLabel}] Fetch failed:`, error);
             return null;
         }
     }
@@ -250,13 +156,6 @@ export class CompanyApiClient {
         return (prefs && prefs.base_url) ? prefs.base_url : CONFIG.DEFAULT_BASE_URL;
     }
 
-    async _getCompanyBaseUrls() {
-        const configuredUrl = await this._getBaseUrl();
-        const localUrl = CONFIG.LOCAL_API_BASE_URL;
-        return [configuredUrl, localUrl]
-            .map(url => String(url || '').trim().replace(/\/+$/, ''))
-            .filter((url, index, urls) => url && urls.indexOf(url) === index);
-    }
 
     /**
      * Выполняет PATCH-запрос к эндпоинту смены статуса через background-скрипт.

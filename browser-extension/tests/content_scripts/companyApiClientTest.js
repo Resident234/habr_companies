@@ -36,22 +36,53 @@ describe('content_script/CompanyApiClient', () => {
         assert.strictEqual(requests[0].headers['ngrok-skip-browser-warning'], 'true');
     });
 
-    it('falls back to the local API when the configured endpoint returns 404', async () => {
+    it('does not fall back to a local API when the configured endpoint returns 404', async () => {
         globalThis.chrome.runtime.sendMessage = async (request) => {
             requests.push(request);
-            if (requests.length === 1) {
-                return { ok: false, status: 404, body: 'Not Found' };
-            }
-            return { ok: true, status: 201, body: '{}' };
+            return { ok: false, status: 404, body: 'Not Found' };
         };
 
         const client = new CompanyApiClient();
         const result = await client.sendCompany('zextras', 'Zextras');
 
-        assert.strictEqual(result.type, 'success');
-        assert.strictEqual(requests.length, 2);
+        assert.strictEqual(result.type, 'error');
+        assert.strictEqual(requests.length, 1);
         assert.match(requests[0].url, /rippling-overwrite-attire\.ngrok-free\.dev\/company\/add\/zextras\/Zextras/);
-        assert.match(requests[1].url, /127\.0\.0\.1:8080\/company\/add\/zextras\/Zextras/);
+        assert.ok(!requests[0].url.includes('127.0.0.1:8080'));
+    });
+
+    it('does not fall back when ngrok returns an offline HTML page for article statuses', async () => {
+        globalThis.chrome.runtime.sendMessage = async (request) => {
+            requests.push(request);
+            return {
+                ok: false,
+                status: 404,
+                body: '<!DOCTYPE html><html><body>The endpoint is offline. (ERR_NGROK_3200)</body></html>'
+            };
+        };
+
+        const client = new CompanyApiClient();
+        const statuses = await client.getArticleStatuses('2gis', 130162);
+
+        assert.strictEqual(statuses, null);
+        assert.strictEqual(requests.length, 1);
+        assert.match(requests[0].url, /rippling-overwrite-attire\.ngrok-free\.dev\/article\/statuses\/2gis\/130162/);
+        assert.ok(!requests[0].url.includes('127.0.0.1:8080'));
+        assert.strictEqual(requests[0].headers['ngrok-skip-browser-warning'], 'true');
+    });
+
+    it('does not retry when a configured status endpoint returns HTTP 200 with HTML', async () => {
+        globalThis.chrome.runtime.sendMessage = async (request) => {
+            requests.push(request);
+            return { ok: true, status: 200, body: '<!doctype html><html><body>ngrok</body></html>' };
+        };
+
+        const client = new CompanyApiClient();
+        const statuses = await client.getArticleStatuses('2gis', 130162);
+
+        assert.strictEqual(statuses, null);
+        assert.strictEqual(requests.length, 1);
+        assert.ok(!requests[0].url.includes('127.0.0.1:8080'));
     });
 
     it('passes request bodies to the background handler', async () => {
