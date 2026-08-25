@@ -193,8 +193,8 @@ GET /company/statuses/{code}
 X-API-Key: <секретный-ключ>
 ```
 
-Возвращает статусы компании по полям `action_industry` и `action_company`
-с человекочитаемыми `title` из связанной таблицы `statuses`.
+Возвращает статусы компании по полям `action_dev`, `action_industry` и
+`action_company` с человекочитаемыми `title` из связанной таблицы `statuses`.
 
 **Ответы:**
 
@@ -209,6 +209,7 @@ X-API-Key: <секретный-ключ>
 ```json
 {
   "code": "otus",
+  "action_dev":      { "code": "in_progress", "title": "В работе" },
   "action_industry": { "code": "in_progress", "title": "В работе" },
   "action_company":  { "code": "backlog",     "title": "В бэклоге" }
 }
@@ -398,7 +399,7 @@ Chrome-расширение вызывает эти эндпоинты при н
 - `articleId` / `newsId` / `postId` — положительное целое число;
 - `field` — имя action-колонки: `action_dev`, `action_post`, `action_comment`,
   `action_industry`, `action_company`. Для компании (`/company/...`) допустимы
-  только `action_industry` и `action_company`;
+  `action_dev`, `action_industry` и `action_company`;
 - `direction` — `fwd` (следующий статус) или `back` (предыдущий).
 
 **Ответы:**
@@ -592,6 +593,10 @@ reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v HabrCompanies
 - Веб-интерфейс ngrok открывается в браузере по адресу http://localhost:4040.
 - Свежая запись в логе туннеля: `%TEMP%\ngrok_startall.log`.
 - HTTPS-URL из вывода ngrok можно использовать в Chrome-расширении.
+- `scripts/health_check.ps1` проверяет не только доступность и корректность JSON,
+  но и наличие обязательного поля `action_dev` в ответе
+  `GET /company/statuses/{code}`. Если поле отсутствует, значит запущен старый
+  бинарник или не применена миграция схемы.
 
 ### Прочие скрипты
 
@@ -689,15 +694,16 @@ Rest-api эта колонка не трогает — она используе
 
 ### Статусы компаний
 
-Справочник `statuses` и колонки `action_industry` / `action_company` в таблице
-`companies` создаются идемпотентной миграцией `sql/create_statuses_and_action_columns.sql`:
+Справочник `statuses` и колонки `action_dev` / `action_industry` /
+`action_company` в таблице `companies` создаются идемпотентной миграцией
+`sql/create_statuses_and_action_columns.sql`:
 
 ```sql
 CREATE TABLE statuses (
     code  VARCHAR(255) PRIMARY KEY,
     title VARCHAR(255) NOT NULL
 );
--- companies: action_industry, action_company → FK на statuses(code)
+-- companies: action_dev, action_industry, action_company → FK на statuses(code)
 ```
 
 Возможные значения: `unprocessed` (Не обработано), `backlog` (В бэклоге),
@@ -705,6 +711,15 @@ CREATE TABLE statuses (
 
 Эндпоинт `GET /company/statuses/{code}` возвращает эти статусы вместе с
 человекочитаемыми `title` из справочника (см. [API](#получение-статусов-компании)).
+
+Для существующей БД сначала примените миграцию
+`sql/create_statuses_and_action_columns.sql` клиентом с кодировкой UTF-8
+(`mysql --default-character-set=utf8mb4 ...`), затем перезапустите `rest-api`
+или `scripts/start_all.ps1`, чтобы запущенный бинарник загрузил новый контракт.
+После этого проверьте локальный и публичный ответы через
+`scripts/health_check.ps1`; проверка завершится ошибкой, если `action_dev` не
+появился. Это также предотвращает сохранение русских названий статусов в виде
+mojibake.
 
 ### Статусы статей
 

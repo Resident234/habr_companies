@@ -115,12 +115,16 @@ function Test-JsonEndpoint {
         }
 
         try {
-            $null = $response.Content | ConvertFrom-Json -ErrorAction Stop
+            $payload = $response.Content | ConvertFrom-Json -ErrorAction Stop
         } catch {
             throw "HTTP $([int]$response.StatusCode), but response is not valid JSON"
         }
 
-        Add-CheckResult -Name $Name -Healthy $true -Detail ("HTTP {0}, JSON, {1} ms" -f [int]$response.StatusCode, $stopwatch.ElapsedMilliseconds)
+        if ($payload.PSObject.Properties.Name -notcontains "action_dev") {
+            throw "HTTP $([int]$response.StatusCode), JSON is missing required company field action_dev"
+        }
+
+        Add-CheckResult -Name $Name -Healthy $true -Detail ("HTTP {0}, JSON with action_dev, {1} ms" -f [int]$response.StatusCode, $stopwatch.ElapsedMilliseconds)
         return $true
     } catch {
         $stopwatch.Stop()

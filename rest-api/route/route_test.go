@@ -754,6 +754,31 @@ func TestHTTP_UpdateCompanyStatus_OK(t *testing.T) {
 	}
 }
 
+func TestHTTP_UpdateCompanyStatus_ActionDevOK(t *testing.T) {
+	withAPIKey(t)
+	withCompanyStatusUpdate(t, func(code, field string, dir dbop.Direction) (*dbop.UpdateResult, bool, error) {
+		if code != "yandex" || field != "action_dev" || dir != dbop.DirectionForward {
+			t.Errorf("unexpected args code=%q field=%q dir=%q", code, field, dir)
+		}
+		return newTestUpdateResult(field), true, nil
+	})
+
+	rec := doPatch(t, "/company/statuses/yandex/action_dev/fwd", "test-key")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	var body struct {
+		Code  string `json:"code"`
+		Field string `json:"field"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Code != "yandex" || body.Field != "action_dev" {
+		t.Fatalf("body=%+v", body)
+	}
+}
+
 func TestHTTP_UpdateCompanyStatus_ValidationErrors(t *testing.T) {
 	withAPIKey(t)
 	withCompanyStatusUpdate(t, func(code, field string, dir dbop.Direction) (*dbop.UpdateResult, bool, error) {
@@ -763,7 +788,6 @@ func TestHTTP_UpdateCompanyStatus_ValidationErrors(t *testing.T) {
 
 	cases := []string{
 		"/company/statuses/bad%20code/action_company/fwd", // невалидный code
-		"/company/statuses/yandex/action_dev/fwd",         // поле недопустимо для компании
 		"/company/statuses/yandex/action_company/up",      // невалидное направление
 		"/company/statuses/yandex/unknown_field/fwd",      // неизвестное поле
 	}

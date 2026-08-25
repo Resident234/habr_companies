@@ -59,10 +59,10 @@ func validContentFieldName(field string) bool {
 }
 
 // validCompanyFieldName проверяет имя action-колонки таблицы companies
-// (у компаний доступна только часть полей).
+// (у компаний доступна часть полей контентной модели).
 func validCompanyFieldName(field string) bool {
 	switch field {
-	case "action_industry", "action_company":
+	case "action_dev", "action_industry", "action_company":
 		return true
 	}
 	return false
@@ -189,8 +189,8 @@ func applyStatusUpdate(table, field, where string, dir Direction, args ...interf
 	}, true, nil
 }
 
-// UpdateCompanyStatus переключает action_industry или action_company компании
-// на соседний статус в StatusOrder.
+// UpdateCompanyStatus переключает action_dev, action_industry или action_company
+// компании на соседний статус в StatusOrder.
 func UpdateCompanyStatus(code, field string, dir Direction) (result *UpdateResult, found bool, err error) {
 	return applyStatusUpdate("companies", field, "code = ?", dir, code)
 }

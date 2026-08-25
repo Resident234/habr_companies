@@ -130,15 +130,16 @@ type CompanyStatus struct {
 	Title string `json:"title"`
 }
 
-// CompanyStatuses — статусы компании по полям action_industry и action_company.
+// CompanyStatuses — статусы компании по полям action_dev, action_industry и action_company.
 type CompanyStatuses struct {
 	Code           string         `json:"code"`
+	ActionDev      *CompanyStatus `json:"action_dev"`
 	ActionIndustry *CompanyStatus `json:"action_industry"`
 	ActionCompany  *CompanyStatus `json:"action_company"`
 }
 
-// GetCompanyStatuses возвращает статусы action_industry и action_company компании
-// с человекочитаемыми title из связанной таблицы statuses.
+// GetCompanyStatuses возвращает статусы action_dev, action_industry и action_company
+// компании с человекочитаемыми title из связанной таблицы statuses.
 // found == false, если компания с таким code не найдена.
 func GetCompanyStatuses(code string) (statuses *CompanyStatuses, found bool, err error) {
 	if db == nil {
@@ -149,18 +150,21 @@ func GetCompanyStatuses(code string) (statuses *CompanyStatuses, found bool, err
 	defer cancel()
 
 	var (
+		devCode, devTitle           string
 		industryCode, industryTitle string
 		companyCode, companyTitle   string
 	)
 	err = db.QueryRowContext(ctx, `
 		SELECT c.code,
+		       sd.code, sd.title,
 		       si.code, si.title,
 		       sc.code, sc.title
 		FROM companies c
+		JOIN statuses sd ON sd.code = c.action_dev
 		JOIN statuses si ON si.code = c.action_industry
 		JOIN statuses sc ON sc.code = c.action_company
 		WHERE c.code = ?`, code,
-	).Scan(&code, &industryCode, &industryTitle, &companyCode, &companyTitle)
+	).Scan(&code, &devCode, &devTitle, &industryCode, &industryTitle, &companyCode, &companyTitle)
 	if err == sql.ErrNoRows {
 		return nil, false, nil
 	}
@@ -170,6 +174,7 @@ func GetCompanyStatuses(code string) (statuses *CompanyStatuses, found bool, err
 
 	return &CompanyStatuses{
 		Code:           code,
+		ActionDev:      &CompanyStatus{Code: devCode, Title: devTitle},
 		ActionIndustry: &CompanyStatus{Code: industryCode, Title: industryTitle},
 		ActionCompany:  &CompanyStatus{Code: companyCode, Title: companyTitle},
 	}, true, nil

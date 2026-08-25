@@ -111,7 +111,7 @@ func addCompany(w http.ResponseWriter, r *http.Request) {
 }
 
 // getCompanyStatusesHandler обрабатывает GET /company/statuses/{code}.
-// Возвращает статусы action_industry и action_company компании
+// Возвращает статусы action_dev, action_industry и action_company компании
 // с человекочитаемыми title из справочника statuses.
 func getCompanyStatusesHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -288,7 +288,7 @@ func parseOptionalPostID(w http.ResponseWriter, idStr, entityLabel string) (int6
 type statusUpdateFunc func(code string, id int64, field string, dir dbop.Direction) (*dbop.UpdateResult, bool, error)
 
 // updateCompanyStatusHandler обрабатывает PATCH /company/statuses/{code}/{field}/{direction}.
-// Переключает action_industry или action_company компании на соседний статус.
+// Переключает action_dev, action_industry или action_company компании на соседний статус.
 func updateCompanyStatusHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	code := vars["code"]
@@ -300,7 +300,7 @@ func updateCompanyStatusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !dbop.ValidCompanyStatusField(field) {
-		respondError(w, http.StatusBadRequest, "invalid field: allowed action_industry, action_company")
+		respondError(w, http.StatusBadRequest, "invalid field: allowed action_dev, action_industry, action_company")
 		return
 	}
 	if !dbop.ValidStatusDirection(dir) {
