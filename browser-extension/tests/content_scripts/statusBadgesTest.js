@@ -23,6 +23,29 @@ describe('content_script/statusBadges', function () {
         action_company: { code: 'rejected', title: 'Отклонено' },
     });
 
+    const buildCompanyStatuses = () => ({
+        code: '1c',
+        action_dev: { code: 'in_progress', title: 'В работе' },
+        action_industry: { code: 'unprocessed', title: 'Не обработано' },
+        action_company: { code: 'done', title: 'Завершено' },
+    });
+
+    const addCompanyName = () => {
+        const card = document.createElement('div');
+        card.className = 'tm-company-profile-card';
+        const info = document.createElement('div');
+        info.className = 'info';
+        const name = document.createElement('a');
+        name.className = 'name';
+        name.textContent = '1С';
+        info.appendChild(name);
+        card.appendChild(info);
+        document.body.appendChild(card);
+        return name;
+    };
+
+    const getCompanyContainer = () => document.getElementById(StatusBadges.CONTAINER_ID);
+
     const addArticleTitle = () => {
         const h1 = document.createElement('h1');
         h1.className = 'tm-title tm-title_h1';
@@ -34,6 +57,44 @@ describe('content_script/statusBadges', function () {
     };
 
     const getArticleContainer = () => document.getElementById(StatusBadges.ARTICLE_CONTAINER_ID);
+
+    describe('#render', function () {
+        it('should render 3 badges after the company name including action_dev', () => {
+            const name = addCompanyName();
+            StatusBadges.render(buildCompanyStatuses());
+
+            const container = getCompanyContainer();
+            assert(container, 'container must exist');
+            assert.strictEqual(name.nextElementSibling, container);
+
+            const badges = container.querySelectorAll('.habr-status-badge');
+            assert.strictEqual(badges.length, 3);
+            assert.deepStrictEqual(
+                [...container.querySelectorAll('.habr-status-badge__text')].map(el => el.textContent),
+                ['В работе', 'Не обработано', 'Завершено']
+            );
+
+            const devBadge = badges[0];
+            assert.strictEqual(devBadge.dataset.entity, 'company');
+            assert.strictEqual(devBadge.dataset.company, '1c');
+            assert.strictEqual(devBadge.dataset.field, 'action_dev');
+            assert.strictEqual(devBadge.title, 'Разработка: В работе');
+        });
+
+        it('should replace previously rendered company badges on re-render', () => {
+            addCompanyName();
+            StatusBadges.render(buildCompanyStatuses());
+            StatusBadges.render(buildCompanyStatuses());
+
+            assert.strictEqual(document.querySelectorAll('#' + StatusBadges.CONTAINER_ID).length, 1);
+        });
+
+        it('should do nothing when company statuses are null', () => {
+            addCompanyName();
+            StatusBadges.render(null);
+            assert.strictEqual(getCompanyContainer(), null);
+        });
+    });
 
     describe('#renderArticle', function () {
         it('should render 5 badges after the article title with titles from statuses', () => {

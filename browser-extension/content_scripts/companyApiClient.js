@@ -193,7 +193,7 @@ export class CompanyApiClient {
         }
     }
 
-    /** Переключает статус бейджа компании (action_industry / action_company). */
+    /** Переключает статус бейджа компании (action_dev / action_industry / action_company). */
     async updateCompanyStatus(companyCode, field, direction) {
         return this._patchStatus(
             `/company/statuses/${encodeURIComponent(companyCode)}/${encodeURIComponent(field)}/${encodeURIComponent(direction)}`

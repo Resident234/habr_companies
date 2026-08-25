@@ -1,6 +1,6 @@
 /**
  * StatusBadges — отображает индикаторы статусов с кнопками переключения:
- *  - компании (action_industry, action_company) рядом с названием компании;
+ *  - компании (action_dev, action_industry, action_company) рядом с названием компании;
  *  - статьи и новости (action_dev, action_post, action_comment, action_industry,
  *    action_company) рядом с заголовком страницы;
  *  - посты на детальной странице и в списке постов.
@@ -23,7 +23,7 @@ export class StatusBadges {
 
     /**
      * Рендерит бейджи статусов после ссылки с названием компании.
-     * @param {Object} statuses — ответ API: { code, action_industry: {code, title}, action_company: {code, title} }
+     * @param {Object} statuses — ответ API: { code, action_dev: {code, title}, action_industry: {code, title}, action_company: {code, title} }
      */
     static render(statuses) {
         console.log('[StatusBadges.render] Called with:', statuses);
@@ -50,6 +50,7 @@ export class StatusBadges {
 
         const ctx = { entity: 'company', company: statuses.code, id: null };
         const badges = [
+            { label: 'Разработка', field: 'action_dev', status: statuses.action_dev },
             { label: 'Отрасль', field: 'action_industry', status: statuses.action_industry },
             { label: 'Компания', field: 'action_company', status: statuses.action_company },
         ];
