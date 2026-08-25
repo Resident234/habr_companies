@@ -12,6 +12,11 @@
 collation `utf8mb4_unicode_ci`; колонки `action_*` и `statuses.code` — c
 `utf8mb4_0900_ai_ci` (см. раздел «Collation и внешние ключи»).
 
+При применении SQL-файлов с русскими значениями явно указывайте клиентскую
+кодировку `utf8mb4` (например, параметром `mysql --default-character-set=utf8mb4`).
+Иначе в `statuses.title` могут сохраниться и затем отображаться в API
+неправильные символы (mojibake).
+
 ---
 
 ## 1. Обзор таблиц
