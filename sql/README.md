@@ -44,6 +44,13 @@ collation `utf8mb4_unicode_ci`; колонки `action_*` и `statuses.code` —
 | `title`                     | `VARCHAR(255)`   | NO   |      | —         | Название компании. |
 | `last_processed_article_id` | `BIGINT UNSIGNED`| YES  |      | NULL      | Последний обработанный `article_id` (прогресс краулера, `GREATEST`, не убывает). |
 | `last_processed_news_id`    | `BIGINT UNSIGNED`| YES  |      | NULL      | Последний обработанный `news_id` (прогресс краулера). |
+| `action_dev`                | `VARCHAR(255)`   | NO   | FK   | `unprocessed` | Статус обработки разработки, FK на `statuses(code)`. |
+| `action_industry`           | `VARCHAR(255)`   | NO   | FK   | `unprocessed` | Статус обработки отрасли, FK на `statuses(code)`. |
+| `action_company`            | `VARCHAR(255)`   | NO   | FK   | `unprocessed` | Статус обработки компании, FK на `statuses(code)`. |
+
+Колонки `action_*` компаний добавляются скриптом
+`create_statuses_and_action_columns.sql`; расширение и REST API используют
+`action_dev` вместе с двумя существовавшими company-статусами.
 
 > ⚠️ **Расхождение DDL ↔ живая БД.** В `create_companies_table.sql` и
 > `add_link_to_companies.sql` есть колонка `link VARCHAR(512)` (URL сайта
@@ -146,7 +153,8 @@ collation `utf8mb4_unicode_ci`; колонки `action_*` и `statuses.code` —
                                                 │ code (PK)
 
     statuses code (PK) ←── action_dev/post/comment/industry/company
-                           (по 5 FK в каждой из articles/posts/news)
+                           (по 5 FK в каждой из articles/posts/news;
+                            action_dev/industry/company в companies)
 
     category code (PK) ←── company_categories ──→ companies(code)
 ```
@@ -204,7 +212,8 @@ MySQL требует, чтобы колонки-кандидаты и referenced
 
 - **Краулер** (`crawler/habrcrawler/db.py`) пишет в `companies`, `articles`,
   `posts`, `news`, справочники и N:M связи; колонки `action_*` он пока не
-  трогает (оставляются в значении по умолчанию `unprocessed`).
+  трогает (включая `companies.action_dev`, оставляя их в значении по умолчанию
+  `unprocessed`).
 - **REST API** (`rest-api/`) работает с `companies` (добавление/выборка).
 - Поля `action_*` — для будущего рабочего процесса обработки контента
   (статусы берутся из `statuses`).

@@ -3,7 +3,7 @@
 -- и колонки action_* с FK на него.
 --   - posts/articles/news: action_dev, action_post, action_comment,
 --                          action_industry, action_company
---   - companies:           action_industry, action_company
+--   - companies:           action_dev, action_industry, action_company
 --
 -- Повторный запуск безопасен: каждая колонка и каждый FK
 -- добавляются только если их ещё нет (проверка через
@@ -69,11 +69,26 @@ SET @c := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONST
 SET @sql := IF(@c = 5, 'SELECT 1', 'ALTER TABLE news ADD CONSTRAINT fk_news_action_dev FOREIGN KEY (action_dev) REFERENCES statuses (code) ON UPDATE CASCADE, ADD CONSTRAINT fk_news_action_post FOREIGN KEY (action_post) REFERENCES statuses (code) ON UPDATE CASCADE, ADD CONSTRAINT fk_news_action_comment FOREIGN KEY (action_comment) REFERENCES statuses (code) ON UPDATE CASCADE, ADD CONSTRAINT fk_news_action_industry FOREIGN KEY (action_industry) REFERENCES statuses (code) ON UPDATE CASCADE, ADD CONSTRAINT fk_news_action_company FOREIGN KEY (action_company) REFERENCES statuses (code) ON UPDATE CASCADE');
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
--- === companies (только эти две) ===
-SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME='companies' AND COLUMN_NAME IN ('action_industry','action_company'));
-SET @sql := IF(@c = 2, 'SELECT 1', 'ALTER TABLE companies ADD COLUMN action_industry VARCHAR(255) NOT NULL DEFAULT ''unprocessed'' COLLATE utf8mb4_0900_ai_ci, ADD COLUMN action_company VARCHAR(255) NOT NULL DEFAULT ''unprocessed'' COLLATE utf8mb4_0900_ai_ci');
+-- === companies ===
+-- Проверяем каждую колонку отдельно, чтобы миграция корректно обновляла
+-- существующую таблицу, в которой уже есть action_industry/action_company.
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME='companies' AND COLUMN_NAME = 'action_dev');
+SET @sql := IF(@c = 1, 'SELECT 1', 'ALTER TABLE companies ADD COLUMN action_dev VARCHAR(255) NOT NULL DEFAULT ''unprocessed'' COLLATE utf8mb4_0900_ai_ci');
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-SET @c := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME='companies' AND CONSTRAINT_NAME LIKE 'fk\_companies\_action\_%');
-SET @sql := IF(@c = 2, 'SELECT 1', 'ALTER TABLE companies ADD CONSTRAINT fk_companies_action_industry FOREIGN KEY (action_industry) REFERENCES statuses (code) ON UPDATE CASCADE, ADD CONSTRAINT fk_companies_action_company FOREIGN KEY (action_company) REFERENCES statuses (code) ON UPDATE CASCADE');
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME='companies' AND COLUMN_NAME = 'action_industry');
+SET @sql := IF(@c = 1, 'SELECT 1', 'ALTER TABLE companies ADD COLUMN action_industry VARCHAR(255) NOT NULL DEFAULT ''unprocessed'' COLLATE utf8mb4_0900_ai_ci');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME='companies' AND COLUMN_NAME = 'action_company');
+SET @sql := IF(@c = 1, 'SELECT 1', 'ALTER TABLE companies ADD COLUMN action_company VARCHAR(255) NOT NULL DEFAULT ''unprocessed'' COLLATE utf8mb4_0900_ai_ci');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @c := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME='companies' AND CONSTRAINT_NAME = 'fk_companies_action_dev');
+SET @sql := IF(@c = 1, 'SELECT 1', 'ALTER TABLE companies ADD CONSTRAINT fk_companies_action_dev FOREIGN KEY (action_dev) REFERENCES statuses (code) ON UPDATE CASCADE');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @c := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME='companies' AND CONSTRAINT_NAME = 'fk_companies_action_industry');
+SET @sql := IF(@c = 1, 'SELECT 1', 'ALTER TABLE companies ADD CONSTRAINT fk_companies_action_industry FOREIGN KEY (action_industry) REFERENCES statuses (code) ON UPDATE CASCADE');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @c := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME='companies' AND CONSTRAINT_NAME = 'fk_companies_action_company');
+SET @sql := IF(@c = 1, 'SELECT 1', 'ALTER TABLE companies ADD CONSTRAINT fk_companies_action_company FOREIGN KEY (action_company) REFERENCES statuses (code) ON UPDATE CASCADE');
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
