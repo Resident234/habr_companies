@@ -149,19 +149,50 @@ Start-Sleep -Seconds 1
 
 # - 6. Locate or build rest-api.exe -
 $RestApiExe = Join-Path $ProjectDir "rest-api.exe"
+$goCmd = (Get-Command "go.exe" -ErrorAction SilentlyContinue).Source
 $needsBuild = -not (Test-Path $RestApiExe)
+$sourceFiles = @(Get-ChildItem -Path $ProjectDir -Recurse -File -Include *.go,go.mod,go.sum |
+    Where-Object { $_.FullName -notmatch '[\\/](vendor|\.git)[\\/]' })
+
 if (-not $needsBuild) {
     $exeTime = (Get-Item $RestApiExe).LastWriteTimeUtc
-    $sourceFiles = Get-ChildItem -Path $ProjectDir -Recurse -File -Include *.go,go.mod,go.sum |
-        Where-Object { $_.FullName -notmatch '[\\/](vendor|\.git)[\\/]' }
     if ($sourceFiles | Where-Object { $_.LastWriteTimeUtc -gt $exeTime }) {
         $needsBuild = $true
         Write-Output "Go sources or module files are newer than rest-api.exe; rebuilding."
     }
 }
+
+# Git checkout timestamps can be older than the executable even when the source
+# revision changed. Compare the revision embedded by `go build` as a second,
+# content-based guard against starting an old binary with missing routes.
+$gitCmd = (Get-Command "git.exe" -ErrorAction SilentlyContinue).Source
+$headRevision = $null
+if ($gitCmd) {
+    # rest-api is normally a subdirectory of the repository, so .git may live
+    # above $ProjectDir. Let Git locate the checkout instead of checking only
+    # for rest-api\.git.
+    $gitRoot = (& $gitCmd -C $ProjectDir rev-parse --show-toplevel 2>$null | Out-String).Trim()
+    if ($gitRoot) {
+        $headRevision = (& $gitCmd -C $ProjectDir rev-parse HEAD 2>$null | Out-String).Trim()
+    }
+}
+if (-not $needsBuild -and $goCmd -and $headRevision) {
+    $revisionLine = (& $goCmd version -m $RestApiExe 2>$null |
+        Select-String '^\s+build\s+vcs\.revision=' | Select-Object -First 1)
+    $binaryRevision = $null
+    if ($revisionLine) {
+        $revisionMatch = [regex]::Match($revisionLine.Line, 'vcs\.revision=(\S+)')
+        if ($revisionMatch.Success) { $binaryRevision = $revisionMatch.Groups[1].Value }
+    }
+    if (-not $binaryRevision -or $binaryRevision -ne $headRevision) {
+        $needsBuild = $true
+        $shownRevision = if ($binaryRevision) { $binaryRevision } else { 'unknown' }
+        Write-Output "rest-api.exe revision $shownRevision differs from checkout $headRevision; rebuilding."
+    }
+}
+
 if ($needsBuild) {
     Write-Output "Building rest-api.exe..."
-    $goCmd = (Get-Command "go.exe" -ErrorAction SilentlyContinue).Source
     if (-not $goCmd) { Write-Error "Go not found. Install Go or place rest-api.exe in $ProjectDir"; exit 1 }
     $prev = Get-Location
     Set-Location $ProjectDir

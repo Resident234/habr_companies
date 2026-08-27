@@ -21,6 +21,15 @@ function Log($msg) {
     Trim-LogLines $LogFile 1000
     }
 
+function Test-NgrokTunnel {
+    try {
+        $tunnelResponse = Invoke-RestMethod -Uri "http://127.0.0.1:4040/api/tunnels" -Method Get -TimeoutSec 3
+        return @($tunnelResponse.tunnels).Count -gt 0
+    } catch {
+        return $false
+    }
+}
+
 Log "Watchdog started."
 $apiPid = $null
 $ngrokPid = $null
@@ -35,7 +44,9 @@ while ($true) {
     $api = Get-Process -Name "rest-api" -ErrorAction SilentlyContinue
     $ng = Get-Process -Name "ngrok" -ErrorAction SilentlyContinue
     $apiIsHealthy = $null -ne $api
-    $ngrokIsHealthy = $null -ne $ng
+    $ngrokProcessHealthy = $null -ne $ng
+    $ngrokTunnelHealthy = $ngrokProcessHealthy -and (Test-NgrokTunnel)
+    $ngrokIsHealthy = $ngrokProcessHealthy -and $ngrokTunnelHealthy
 
     if ($restartJob -and $restartJob.State -notin @('NotStarted', 'Running')) {
         Log "Restart job finished with state $($restartJob.State)"
@@ -55,8 +66,9 @@ while ($true) {
     if (-not $apiIsHealthy -or -not $ngrokIsHealthy) {
         $missing = @()
         if (-not $apiIsHealthy) { $missing += 'rest-api' }
-        if (-not $ngrokIsHealthy) { $missing += 'ngrok' }
-        Log "CRASH: missing process(es): $($missing -join ', ')"
+        if (-not $ngrokProcessHealthy) { $missing += 'ngrok process' }
+        elseif (-not $ngrokTunnelHealthy) { $missing += 'ngrok active tunnel' }
+        Log "UNHEALTHY: $($missing -join ', ')"
 
         $now = Get-Date
         $cooldownActive = ($now - $lastRestartAt) -lt $restartCooldown
