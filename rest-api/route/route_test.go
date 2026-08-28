@@ -1063,3 +1063,36 @@ func TestHTTP_LongCommentTextIsAccepted(t *testing.T) {
 		t.Fatalf("comment text was changed: got %d bytes, want %d bytes", len(savedText), len(wantText))
 	}
 }
+
+func TestHTTP_QuickAddCategoryNormalizesTitle(t *testing.T) {
+	withAPIKey(t)
+	old := upsertCategory
+	defer func() { upsertCategory = old }()
+
+	upsertCategory = func(code, title string) (bool, error) {
+		if code != "Informatsionnaya_bezopasnost" {
+			t.Errorf("unexpected code=%q", code)
+		}
+		if title != "Информационная безопасность" {
+			t.Errorf("unexpected title=%q", title)
+		}
+		return true, nil
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/category/quick-add", strings.NewReader(`{"title":"Информационной безопасности"}`))
+	req.Header.Set("X-API-Key", "test-key")
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	NewRouter().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	var body map[string]string
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body["title"] != "Информационная безопасность" {
+		t.Fatalf("body=%v", body)
+	}
+}

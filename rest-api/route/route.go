@@ -435,7 +435,8 @@ func quickAddCompany(w http.ResponseWriter, r *http.Request) {
 }
 
 // quickAddCategory обрабатывает POST /category/quick-add.
-// Принимает {"title": "..."}, транслитерирует title в code и сохраняет отрасль.
+// Принимает {"title": "..."}, приводит название отрасли к именительному
+// падежу, транслитерирует нормализованный title в code и сохраняет отрасль.
 var upsertCategory = dbop.UpsertCategory
 
 func quickAddCategory(w http.ResponseWriter, r *http.Request) {
@@ -448,6 +449,12 @@ func quickAddCategory(w http.ResponseWriter, r *http.Request) {
 	title := strings.TrimSpace(req.Title)
 	if !validateTitle(title) {
 		respondError(w, http.StatusBadRequest, "invalid title: must be 1-255 chars")
+		return
+	}
+
+	title = util.NormalizeCategoryTitle(title)
+	if !validateTitle(title) {
+		respondError(w, http.StatusBadRequest, "invalid normalized title: must be 1-255 chars")
 		return
 	}
 
