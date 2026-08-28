@@ -49,7 +49,12 @@ while ($true) {
     $ngrokIsHealthy = $ngrokProcessHealthy -and $ngrokTunnelHealthy
 
     if ($restartJob -and $restartJob.State -notin @('NotStarted', 'Running')) {
-        Log "Restart job finished with state $($restartJob.State)"
+        $restartState = $restartJob.State
+        $restartOutput = @(Receive-Job -Job $restartJob -Keep -ErrorAction SilentlyContinue)
+        Log "Restart job finished with state $restartState"
+        foreach ($line in $restartOutput) {
+            if ($line) { Log "restart: $line" }
+        }
         Remove-Job -Job $restartJob -Force -ErrorAction SilentlyContinue
         $restartJob = $null
     }
@@ -77,17 +82,56 @@ while ($true) {
         } elseif ($cooldownActive) {
             Log "Autorestart suppressed for $([int]($restartCooldown - ($now - $lastRestartAt)).TotalSeconds)s cooldown"
         } else {
-            if ($ngrokIsHealthy) {
+            # A live ngrok process without a tunnel is a stale process. Stop it
+            # even on the unhealthy path; otherwise the old start_all.ps1 keeps
+            # its mutex and every recovery attempt is rejected as a duplicate.
+            if ($ngrokProcessHealthy) {
                 Stop-Process -Id $ng.Id -Force -ErrorAction SilentlyContinue
             }
             $apiPid = $null
             $ngrokPid = $null
             Log "Autorestart: launching start_all.ps1"
             $startScript = Join-Path $PSScriptRoot "start_all.ps1"
+            $restartLog = Join-Path $PSScriptRoot "start_run.log"
             $restartJob = Start-Job -ScriptBlock {
-                param($scriptPath)
-                & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptPath 2>&1 | Out-Null
-            } -ArgumentList $startScript
+                param($scriptPath, $logPath)
+                $ErrorActionPreference = 'Continue'
+                Add-Content -Path $logPath -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') watchdog restart requested"
+
+                # Stopping ngrok makes an older launcher leave its keep-alive loop.
+                # Give it time to release the named mutex before starting again.
+                $staleNgrok = Get-Process -Name 'ngrok' -ErrorAction SilentlyContinue
+                if ($staleNgrok) {
+                    $staleNgrok | Stop-Process -Force -ErrorAction SilentlyContinue
+                    Start-Sleep -Seconds 2
+                }
+
+                # The previous start_all.ps1 may still be unwinding after ngrok
+                # exits. Do not race its named mutex and silently lose recovery.
+                $startMutex = [System.Threading.Mutex]::new($false, 'Local\HabrCompanies.RestApiNgrok.StartAll')
+                $mutexAcquired = $false
+                for ($attempt = 0; $attempt -lt 15 -and -not $mutexAcquired; $attempt++) {
+                    try { $mutexAcquired = $startMutex.WaitOne(0) }
+                    catch [System.Threading.AbandonedMutexException] { $mutexAcquired = $true }
+                    if (-not $mutexAcquired) { Start-Sleep -Seconds 1 }
+                }
+                if ($mutexAcquired) {
+                    $startMutex.ReleaseMutex()
+                } else {
+                    Add-Content -Path $logPath -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') start_all mutex remained busy after 15s"
+                }
+                $startMutex.Dispose()
+                if (-not $mutexAcquired) { exit 1 }
+
+                & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptPath 2>&1 |
+                    ForEach-Object {
+                        Add-Content -Path $logPath -Value $_
+                        $_
+                    } | Out-Null
+                $exitCode = $LASTEXITCODE
+                Add-Content -Path $logPath -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') watchdog restart exit_code=$exitCode"
+                exit $exitCode
+            } -ArgumentList $startScript, $restartLog
             $lastRestartAt = $now
         }
     }

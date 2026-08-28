@@ -142,6 +142,15 @@ if ($null -eq $ngrokVersion -or $ngrokVersion -lt $minimumNgrokVersion) {
 Write-Output "Using ngrok Agent $ngrokVersion"
 
 # - 5. Stop previous instances -
+function Stop-StartedProcesses {
+    if ($ngrokProcess -and -not $ngrokProcess.HasExited) {
+        Stop-Process -Id $ngrokProcess.Id -Force -ErrorAction SilentlyContinue
+    }
+    if ($apiProcess -and -not $apiProcess.HasExited) {
+        Stop-Process -Id $apiProcess.Id -Force -ErrorAction SilentlyContinue
+    }
+}
+
 Write-Output "Stopping previous instances..."
 Get-Process -Name "rest-api" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Get-Process -Name "ngrok" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
@@ -222,7 +231,11 @@ for ($i = 0; $i -lt 20; $i++) {
         break
     }
 }
-if (-not $ready) { Write-Error "rest-api did not become ready"; exit 1 }
+if (-not $ready) {
+    Stop-StartedProcesses
+    Write-Error "rest-api did not become ready"
+    exit 1
+}
 Write-Output "rest-api is responding on :$LocalPort"
 
 # - 8. Start ngrok -
@@ -248,13 +261,27 @@ Write-Output "Waiting for ngrok tunnel..."
 $publicUrl = $null
 for ($i = 0; $i -lt 20; $i++) {
     Start-Sleep -Seconds 2
+    if ($ngrokProcess.HasExited) {
+        $ngrokFailure = (Get-Content $ngrokErrLog -Tail 20 -ErrorAction SilentlyContinue) -join ' '
+        Stop-StartedProcesses
+        if ($ngrokFailure) {
+            Write-Error "ngrok exited before creating a tunnel: $ngrokFailure"
+        } else {
+            Write-Error "ngrok exited before creating a tunnel. Check log: $ngrokLog"
+        }
+        exit 1
+    }
     $tunnels = Invoke-RestMethod -Uri "http://localhost:4040/api/tunnels" -Method Get -TimeoutSec 3 -ErrorAction SilentlyContinue
     if ($tunnels -and $tunnels.tunnels -and $tunnels.tunnels.Count -gt 0) {
         $publicUrl = $tunnels.tunnels[0].public_url
         break
     }
 }
-if (-not $publicUrl) { Write-Error "Could not retrieve ngrok public URL. Check log: $ngrokLog"; exit 1 }
+if (-not $publicUrl) {
+    Stop-StartedProcesses
+    Write-Error "Could not retrieve ngrok public URL. Check log: $ngrokLog"
+    exit 1
+}
 
 # - 10. Test external access -
 Write-Output "Testing external access via ngrok..."
