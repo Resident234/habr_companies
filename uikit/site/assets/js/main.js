@@ -1,5 +1,5 @@
 // ==========================================================
-// Techarin Creative Agency Template — Main JS
+// UI Kit Creative Agency Template — Main JS
 // ----------------------------------------------------------
 // This script centralizes all interactive behaviors used
 // across pages, so you can:
@@ -27,7 +27,7 @@
 
   function initLenis() {
     if (typeof Lenis === 'undefined') {
-      //console.warn('[Techarin] Lenis not found. Smooth scrolling disabled.');
+      //console.warn('[UI Kit] Lenis not found. Smooth scrolling disabled.');
       return;
     }
 
@@ -99,7 +99,7 @@
 
   function initScrollAnimations() {
     if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') {
-      console.warn('[Techarin] GSAP or ScrollTrigger not found. Animations disabled.');
+      console.warn('[UI Kit] GSAP or ScrollTrigger not found. Animations disabled.');
       return;
     }
 
@@ -232,7 +232,7 @@
       initMobileNav();
       setCurrentYear();
     } catch (error) {
-      console.error('[Techarin] Initialization error:', error);
+      console.error('[UI Kit] Initialization error:', error);
     }
   });
 })();

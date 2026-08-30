@@ -12,8 +12,8 @@
     font-weight: normal;
     font-style: normal;
 
-    src: url('https://demo.themeshawk.com/html/techarin/assets/slick/css/fonts/slick.eot');
-    src: url('https://demo.themeshawk.com/html/techarin/assets/slick/css/fonts/slick.eot?') format('embedded-opentype'), url('https://demo.themeshawk.com/html/techarin/assets/slick/css/fonts/slick.woff') format('woff'), url('https://demo.themeshawk.com/html/techarin/assets/slick/css/fonts/slick.ttf') format('truetype'), url('https://demo.themeshawk.com/html/techarin/assets/slick/css/fonts/slick.svg') format('svg');
+    src: url('https://demo.themeshawk.com/html/ui-kit/assets/slick/css/fonts/slick.eot');
+    src: url('https://demo.themeshawk.com/html/ui-kit/assets/slick/css/fonts/slick.eot?') format('embedded-opentype'), url('https://demo.themeshawk.com/html/ui-kit/assets/slick/css/fonts/slick.woff') format('woff'), url('https://demo.themeshawk.com/html/ui-kit/assets/slick/css/fonts/slick.ttf') format('truetype'), url('https://demo.themeshawk.com/html/ui-kit/assets/slick/css/fonts/slick.svg') format('svg');
 }
 /* Arrows */
 .slick-prev,

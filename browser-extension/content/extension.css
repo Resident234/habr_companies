@@ -1,24 +1,24 @@
 :root {
-  --techarin-ink-950: #020617;
-  --techarin-ink-900: #0f172a;
-  --techarin-ink-800: #1e293b;
-  --techarin-slate-400: #94a3b8;
-  --techarin-slate-300: #cbd5e1;
-  --techarin-slate-100: #f1f5f9;
-  --techarin-brand-500: #8b5cf6;
-  --techarin-brand-400: #a78bfa;
-  --techarin-cyan-400: #22d3ee;
-  --techarin-success: #34d399;
-  --techarin-danger: #fb7185;
-  --techarin-border: rgba(148, 163, 184, 0.22);
-  --techarin-shadow: 0 18px 45px rgba(2, 6, 23, 0.35);
+  --ui-kit-ink-950: #020617;
+  --ui-kit-ink-900: #0f172a;
+  --ui-kit-ink-800: #1e293b;
+  --ui-kit-slate-400: #94a3b8;
+  --ui-kit-slate-300: #cbd5e1;
+  --ui-kit-slate-100: #f1f5f9;
+  --ui-kit-brand-500: #8b5cf6;
+  --ui-kit-brand-400: #a78bfa;
+  --ui-kit-cyan-400: #22d3ee;
+  --ui-kit-success: #34d399;
+  --ui-kit-danger: #fb7185;
+  --ui-kit-border: rgba(148, 163, 184, 0.22);
+  --ui-kit-shadow: 0 18px 45px rgba(2, 6, 23, 0.35);
 }
 
 html,
 body {
   background: transparent;
   box-sizing: border-box;
-  color: var(--techarin-slate-100);
+  color: var(--ui-kit-slate-100);
   cursor: default;
   display: flex;
   flex-direction: column;
@@ -35,14 +35,14 @@ body * { box-sizing: border-box; text-align: start; }
 .panel-list-item { align-items: center; border: 1px solid transparent; border-radius: 10px; display: flex; gap: 10px; height: 36px; margin: 0 8px; padding: 0 12px; transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease; }
 .panel-list-item:not(.disabled):hover { background-color: rgba(139, 92, 246, 0.14); border-color: rgba(167, 139, 250, 0.32); color: #fff; }
 .panel-list-item:not(.disabled):hover:active { background-color: rgba(139, 92, 246, 0.22); }
-.panel-list-item.disabled { color: var(--techarin-slate-400); }
+.panel-list-item.disabled { color: var(--ui-kit-slate-400); }
 .panel-list-item > .icon { align-items: center; background: rgba(139, 92, 246, 0.16); border: 1px solid rgba(167, 139, 250, 0.28); border-radius: 8px; display: flex; height: 24px; justify-content: center; width: 24px; }
 .panel-list-item > .icon img { height: 14px; margin: 0; width: 14px; }
 .panel-list-item > .text { color: inherit; flex-grow: 10; font-size: 12px; font-weight: 600; letter-spacing: 0.01em; }
-.panel-list-item > .text-shortcut { color: var(--techarin-slate-400); font-size: 11px; justify-content: flex-end; }
+.panel-list-item > .text-shortcut { color: var(--ui-kit-slate-400); font-size: 11px; justify-content: flex-end; }
 
-/* Techarin UI kit glass notification bar. */
-.habr-companies-bar { align-items: center !important; backdrop-filter: blur(18px) !important; background: linear-gradient(110deg, rgba(15, 23, 42, 0.96), rgba(49, 46, 129, 0.9)) !important; border: 1px solid rgba(167, 139, 250, 0.34) !important; border-radius: 14px !important; box-shadow: var(--techarin-shadow) !important; color: var(--techarin-slate-100) !important; display: flex !important; font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important; font-size: 13px !important; font-weight: 600 !important; left: 50% !important; letter-spacing: 0.01em !important; max-width: min(560px, calc(100vw - 32px)) !important; padding: 11px 18px !important; position: fixed !important; text-align: center !important; top: 16px !important; transform: translateX(-50%) !important; transition: opacity 180ms ease, transform 180ms ease !important; width: max-content !important; z-index: 2147483647 !important; }
+/* UI Kit UI kit glass notification bar. */
+.habr-companies-bar { align-items: center !important; backdrop-filter: blur(18px) !important; background: linear-gradient(110deg, rgba(15, 23, 42, 0.96), rgba(49, 46, 129, 0.9)) !important; border: 1px solid rgba(167, 139, 250, 0.34) !important; border-radius: 14px !important; box-shadow: var(--ui-kit-shadow) !important; color: var(--ui-kit-slate-100) !important; display: flex !important; font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important; font-size: 13px !important; font-weight: 600 !important; left: 50% !important; letter-spacing: 0.01em !important; max-width: min(560px, calc(100vw - 32px)) !important; padding: 11px 18px !important; position: fixed !important; text-align: center !important; top: 16px !important; transform: translateX(-50%) !important; transition: opacity 180ms ease, transform 180ms ease !important; width: max-content !important; z-index: 2147483647 !important; }
 .habr-companies-bar--success { border-color: rgba(52, 211, 153, 0.48) !important; }
 .habr-companies-bar--error { border-color: rgba(251, 113, 133, 0.55) !important; }
 .habr-companies-bar--info { border-color: rgba(34, 211, 238, 0.45) !important; }
@@ -52,19 +52,19 @@ body * { box-sizing: border-box; text-align: start; }
 .habr-status-badges { align-items: center !important; display: inline-flex !important; flex-wrap: wrap !important; gap: 6px !important; margin-left: 10px !important; vertical-align: middle !important; }
 .habr-status-badges--article, .habr-status-badges--post-page, .habr-status-badges--post { display: flex !important; flex-wrap: wrap !important; gap: 7px !important; margin: 9px 0 13px !important; }
 .habr-status-badges--post-page .habr-status-badge, .habr-status-badges--post .habr-status-badge { font-size: 11px !important; padding: 4px 7px !important; }
-.habr-status-badge { align-items: center !important; backdrop-filter: blur(12px) !important; background: rgba(15, 23, 42, 0.82) !important; border: 1px solid var(--techarin-border) !important; border-radius: 999px !important; box-shadow: 0 8px 20px rgba(2, 6, 23, 0.16) !important; color: var(--techarin-slate-300) !important; display: inline-flex !important; font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important; font-size: 12px !important; font-weight: 600 !important; gap: 6px !important; line-height: 1.2 !important; padding: 5px 7px !important; white-space: nowrap !important; }
+.habr-status-badge { align-items: center !important; backdrop-filter: blur(12px) !important; background: rgba(15, 23, 42, 0.82) !important; border: 1px solid var(--ui-kit-border) !important; border-radius: 999px !important; box-shadow: 0 8px 20px rgba(2, 6, 23, 0.16) !important; color: var(--ui-kit-slate-300) !important; display: inline-flex !important; font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important; font-size: 12px !important; font-weight: 600 !important; gap: 6px !important; line-height: 1.2 !important; padding: 5px 7px !important; white-space: nowrap !important; }
 .habr-status-badge__text { color: inherit !important; }
-.habr-status-badge__nav { align-items: center !important; background: rgba(148, 163, 184, 0.11) !important; border: 1px solid rgba(148, 163, 184, 0.2) !important; border-radius: 999px !important; color: var(--techarin-slate-300) !important; cursor: pointer !important; display: inline-flex !important; font-size: 10px !important; height: 20px !important; justify-content: center !important; line-height: 1 !important; opacity: 0.82 !important; padding: 0 !important; transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, opacity 150ms ease !important; width: 20px !important; }
+.habr-status-badge__nav { align-items: center !important; background: rgba(148, 163, 184, 0.11) !important; border: 1px solid rgba(148, 163, 184, 0.2) !important; border-radius: 999px !important; color: var(--ui-kit-slate-300) !important; cursor: pointer !important; display: inline-flex !important; font-size: 10px !important; height: 20px !important; justify-content: center !important; line-height: 1 !important; opacity: 0.82 !important; padding: 0 !important; transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, opacity 150ms ease !important; width: 20px !important; }
 .habr-status-badge__nav:hover:not(:disabled) { background: rgba(167, 139, 250, 0.25) !important; border-color: rgba(167, 139, 250, 0.58) !important; color: #fff !important; opacity: 1 !important; }
 .habr-status-badge__nav:disabled { cursor: wait !important; opacity: 0.35 !important; }
 .habr-status-badge__dot { border-radius: 50% !important; flex-shrink: 0 !important; height: 7px !important; width: 7px !important; }
 .habr-status-badge--unprocessed { border-color: rgba(148, 163, 184, 0.36) !important; }
 .habr-status-badge--unprocessed .habr-status-badge__dot { background: #94a3b8 !important; }
 .habr-status-badge--backlog { border-color: rgba(34, 211, 238, 0.44) !important; color: #a5f3fc !important; }
-.habr-status-badge--backlog .habr-status-badge__dot { background: var(--techarin-cyan-400) !important; }
+.habr-status-badge--backlog .habr-status-badge__dot { background: var(--ui-kit-cyan-400) !important; }
 .habr-status-badge--in_progress { border-color: rgba(251, 191, 36, 0.48) !important; color: #fde68a !important; }
 .habr-status-badge--in_progress .habr-status-badge__dot { background: #fbbf24 !important; }
 .habr-status-badge--done { border-color: rgba(52, 211, 153, 0.48) !important; color: #a7f3d0 !important; }
-.habr-status-badge--done .habr-status-badge__dot { background: var(--techarin-success) !important; }
+.habr-status-badge--done .habr-status-badge__dot { background: var(--ui-kit-success) !important; }
 .habr-status-badge--rejected { border-color: rgba(251, 113, 133, 0.52) !important; color: #fecdd3 !important; }
-.habr-status-badge--rejected .habr-status-badge__dot { background: var(--techarin-danger) !important; }
+.habr-status-badge--rejected .habr-status-badge__dot { background: var(--ui-kit-danger) !important; }

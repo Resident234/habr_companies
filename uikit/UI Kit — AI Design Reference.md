@@ -1,6 +1,6 @@
-# Techarin UI Kit — AI Design Reference
+# UI Kit UI Kit — AI Design Reference
 
-> Generated from the publicly rendered Techarin HTML template at https://demo.themeshawk.com/html/techarin/index.html. This document describes observed implementation styles; it is not the original authoring design system.
+> Generated from the publicly rendered UI Kit HTML template at https://demo.themeshawk.com/html/ui-kit/index.html. This document describes observed implementation styles; it is not the original authoring design system.
 
 ## Usage for AI agents
 
@@ -328,38 +328,38 @@ The stylesheet explicitly references `Outfit` and `Space Grotesk`; the public Go
 
 | File | Title | H1–H3 headings | Forms | Images |
 |---|---|---|---:|---:|
-| `404.html` | 404 - Techarin — AI Startup Agency HTML Template | 404; Page not found | 1 | 2 |
-| `about.html` | About Us - Techarin — AI Startup Agency HTML Template | About Us.; We're a small team of designers, strategists, and engineers building digital brands that last.; How we work; People behind Techarin | 1 | 8 |
-| `blog-single.html` | Designing for clarity: simple patterns that scale - Techarin | Designing for clarity: simple patterns that scale; Designing for clarity: simple patterns that scale; Start with hierarchy; Make decisions explicit | 1 | 16 |
-| `blog.html` | Blog - Techarin — AI Startup Agency HTML Template | Blogs; From the studio; Designing AI interfaces users can trust; From prompt to production AI | 1 | 26 |
-| `cart.html` | Cart - Techarin — AI Startup Agency HTML Template | Your Cart; Spicy Pepperoni Blaze; Order Summary; Related products | 1 | 11 |
-| `checkout.html` | Portfolio v2 - Techarin — AI Startup Agency HTML Template | Checkout; Delivery Details; Payment; Order Summary | 2 | 2 |
-| `contact.html` | Portfolio v2 - Techarin — AI Startup Agency HTML Template | Contact Us; Tell us about the product, brand, or idea you're ready to launch. | 2 | 2 |
-| `faq.html` | FAQ - Techarin — AI Startup Agency HTML Template | FAQ; How can we help you?; Getting Started; Design System | 1 | 2 |
-| `home-hero-image.html` | Techarin — AI Startup Agency HTML Template | We craft bold digital experiences for ambitious brands.; Strategy, design, and development for brave brands.; Brand Strategy & Identity; Web & Product Design | 2 | 27 |
-| `home-light.html` | Techarin — AI Startup Agency HTML Template | We craft bold digital experiences for ambitious brands.; Strategy, design, and development for brave brands.; Brand Strategy & Identity; Web & Product Design | 2 | 29 |
-| `home-rtl.html` | Techarin — AI Startup Agency HTML Template | We craft bold digital experiences for ambitious brands.; Strategy, design, and development for brave brands.; Brand Strategy & Identity; Web & Product Design | 2 | 29 |
-| `home-single.html` | Techarin — AI Startup Agency HTML Template | We craft bold digital experiences for ambitious brands.; Strategy, design, and development for brave brands.; Brand Strategy & Identity; Web & Product Design | 2 | 29 |
-| `home-slider.html` | Techarin — AI Startup Agency HTML Template | Turning intelligence into real-world impact through AI.; We design and deploy AI-powered products that scale with your business.; We merge artificial intelligence with creativity to build what’s next.; Strategy, design, and development for brave brands. | 2 | 30 |
-| `home-video.html` | Techarin — AI Startup Agency HTML Template | We craft bold digital experiences for ambitious brands.; Strategy, design, and development for brave brands.; Brand Strategy & Identity; Web & Product Design | 2 | 27 |
-| `image-gallery-advanced.html` | Image Gallery Advanced - Techarin — AI Startup Agency HTML Template | Image Gallery Advanced; Project Visuals | 1 | 9 |
-| `image-gallery.html` | Portfolio v2 - Techarin — AI Startup Agency HTML Template | Gallery; Project Image Gallery | 1 | 14 |
-| `index.html` | Techarin — AI Startup Agency HTML Template | We craft bold digital experiences for ambitious brands.; Strategy, design, and development for brave brands.; Brand Strategy & Identity; Web & Product Design | 2 | 29 |
-| `newsletter.html` | Newsletter - Techarin — AI Startup Agency HTML Template | Newsletter.; Subscribe to our newsletter | 2 | 2 |
-| `portfolio-single.html` | Portfolio v2 - Techarin — AI Startup Agency HTML Template | Lumen Analytics — Dashboard & Onboarding; Lumen Analytics — Dashboard & Onboarding; Challenge; Outcome | 1 | 10 |
-| `portfolio-v2.html` | Portfolio v2 - Techarin — AI Startup Agency HTML Template | Selected projects and collaborations.; AI Softwares; Face Reading; Bio Metric | 1 | 10 |
-| `portfolio.html` | Service Single - Techarin — AI Startup Agency HTML Template | Selected projects and collaborations.; Selected projects and collaborations.; Signal Cloud; Northwind | 1 | 10 |
-| `pricing.html` | Pricing - Techarin — AI Startup Agency HTML Template | Pricing.; Choose the plan that fits your needs; Starter; Pro | 1 | 2 |
-| `privacy-policy.html` | Privacy Policy - Techarin — AI Startup Agency HTML Template | Privacy Policy; Information We Collect; How We Use Your Information; Cookies & Tracking Technologies | 1 | 2 |
-| `product.html` | From Prompt to Production AI - Techarin — AI Startup Agency HTML Template | From Prompt to Production AI; Related products; AI Analytics Dashboard; AI Chatbot System | 1 | 13 |
-| `service-single.html` | Service Single - Techarin — AI Startup Agency HTML Template | Brand Strategy & Identity; Brand Strategy & Identity; Overview; Deliverables | 1 | 4 |
-| `services.html` | Services - Techarin — AI Startup Agency HTML Template | Services; Strategy, design, and development for brave brands.; Brand Strategy & Identity; Web & Product Design | 1 | 2 |
-| `shop.html` | Portfolio v2 - Techarin — AI Startup Agency HTML Template | Our Products; AI Analytics Dashboard; AI Chatbot System; Predictive AI Engine | 1 | 26 |
-| `team-single.html` | Alex Morgan - Techarin — AI Startup Agency HTML Template | Alex Morgan; Alex Morgan; Selected Work; AI Softwares | 1 | 12 |
-| `team-v2.html` | Team - Techarin — AI Startup Agency HTML Template | People behind Techarin; People behind Techarin; Maria Rosa; Jassika | 1 | 8 |
-| `team.html` | Team - Techarin — AI Startup Agency HTML Template | People behind Techarin; People behind Techarin; Alex Morgan; Jamie Lee | 1 | 8 |
-| `terms.html` | Terms and Conditions - Techarin — AI Startup Agency HTML Template | Terms & Conditions; Acceptance of Terms; Use of Services; Intellectual Property | 1 | 2 |
-| `testimonial.html` | Testimonials - Techarin — AI Startup Agency HTML Template | Testimonials; What our clients say | 1 | 8 |
+| `404.html` | 404 - UI Kit — AI Startup Agency HTML Template | 404; Page not found | 1 | 2 |
+| `about.html` | About Us - UI Kit — AI Startup Agency HTML Template | About Us.; We're a small team of designers, strategists, and engineers building digital brands that last.; How we work; People behind UI Kit | 1 | 8 |
+| `blog-single.html` | Designing for clarity: simple patterns that scale - UI Kit | Designing for clarity: simple patterns that scale; Designing for clarity: simple patterns that scale; Start with hierarchy; Make decisions explicit | 1 | 16 |
+| `blog.html` | Blog - UI Kit — AI Startup Agency HTML Template | Blogs; From the studio; Designing AI interfaces users can trust; From prompt to production AI | 1 | 26 |
+| `cart.html` | Cart - UI Kit — AI Startup Agency HTML Template | Your Cart; Spicy Pepperoni Blaze; Order Summary; Related products | 1 | 11 |
+| `checkout.html` | Portfolio v2 - UI Kit — AI Startup Agency HTML Template | Checkout; Delivery Details; Payment; Order Summary | 2 | 2 |
+| `contact.html` | Portfolio v2 - UI Kit — AI Startup Agency HTML Template | Contact Us; Tell us about the product, brand, or idea you're ready to launch. | 2 | 2 |
+| `faq.html` | FAQ - UI Kit — AI Startup Agency HTML Template | FAQ; How can we help you?; Getting Started; Design System | 1 | 2 |
+| `home-hero-image.html` | UI Kit — AI Startup Agency HTML Template | We craft bold digital experiences for ambitious brands.; Strategy, design, and development for brave brands.; Brand Strategy & Identity; Web & Product Design | 2 | 27 |
+| `home-light.html` | UI Kit — AI Startup Agency HTML Template | We craft bold digital experiences for ambitious brands.; Strategy, design, and development for brave brands.; Brand Strategy & Identity; Web & Product Design | 2 | 29 |
+| `home-rtl.html` | UI Kit — AI Startup Agency HTML Template | We craft bold digital experiences for ambitious brands.; Strategy, design, and development for brave brands.; Brand Strategy & Identity; Web & Product Design | 2 | 29 |
+| `home-single.html` | UI Kit — AI Startup Agency HTML Template | We craft bold digital experiences for ambitious brands.; Strategy, design, and development for brave brands.; Brand Strategy & Identity; Web & Product Design | 2 | 29 |
+| `home-slider.html` | UI Kit — AI Startup Agency HTML Template | Turning intelligence into real-world impact through AI.; We design and deploy AI-powered products that scale with your business.; We merge artificial intelligence with creativity to build what’s next.; Strategy, design, and development for brave brands. | 2 | 30 |
+| `home-video.html` | UI Kit — AI Startup Agency HTML Template | We craft bold digital experiences for ambitious brands.; Strategy, design, and development for brave brands.; Brand Strategy & Identity; Web & Product Design | 2 | 27 |
+| `image-gallery-advanced.html` | Image Gallery Advanced - UI Kit — AI Startup Agency HTML Template | Image Gallery Advanced; Project Visuals | 1 | 9 |
+| `image-gallery.html` | Portfolio v2 - UI Kit — AI Startup Agency HTML Template | Gallery; Project Image Gallery | 1 | 14 |
+| `index.html` | UI Kit — AI Startup Agency HTML Template | We craft bold digital experiences for ambitious brands.; Strategy, design, and development for brave brands.; Brand Strategy & Identity; Web & Product Design | 2 | 29 |
+| `newsletter.html` | Newsletter - UI Kit — AI Startup Agency HTML Template | Newsletter.; Subscribe to our newsletter | 2 | 2 |
+| `portfolio-single.html` | Portfolio v2 - UI Kit — AI Startup Agency HTML Template | Lumen Analytics — Dashboard & Onboarding; Lumen Analytics — Dashboard & Onboarding; Challenge; Outcome | 1 | 10 |
+| `portfolio-v2.html` | Portfolio v2 - UI Kit — AI Startup Agency HTML Template | Selected projects and collaborations.; AI Softwares; Face Reading; Bio Metric | 1 | 10 |
+| `portfolio.html` | Service Single - UI Kit — AI Startup Agency HTML Template | Selected projects and collaborations.; Selected projects and collaborations.; Signal Cloud; Northwind | 1 | 10 |
+| `pricing.html` | Pricing - UI Kit — AI Startup Agency HTML Template | Pricing.; Choose the plan that fits your needs; Starter; Pro | 1 | 2 |
+| `privacy-policy.html` | Privacy Policy - UI Kit — AI Startup Agency HTML Template | Privacy Policy; Information We Collect; How We Use Your Information; Cookies & Tracking Technologies | 1 | 2 |
+| `product.html` | From Prompt to Production AI - UI Kit — AI Startup Agency HTML Template | From Prompt to Production AI; Related products; AI Analytics Dashboard; AI Chatbot System | 1 | 13 |
+| `service-single.html` | Service Single - UI Kit — AI Startup Agency HTML Template | Brand Strategy & Identity; Brand Strategy & Identity; Overview; Deliverables | 1 | 4 |
+| `services.html` | Services - UI Kit — AI Startup Agency HTML Template | Services; Strategy, design, and development for brave brands.; Brand Strategy & Identity; Web & Product Design | 1 | 2 |
+| `shop.html` | Portfolio v2 - UI Kit — AI Startup Agency HTML Template | Our Products; AI Analytics Dashboard; AI Chatbot System; Predictive AI Engine | 1 | 26 |
+| `team-single.html` | Alex Morgan - UI Kit — AI Startup Agency HTML Template | Alex Morgan; Alex Morgan; Selected Work; AI Softwares | 1 | 12 |
+| `team-v2.html` | Team - UI Kit — AI Startup Agency HTML Template | People behind UI Kit; People behind UI Kit; Maria Rosa; Jassika | 1 | 8 |
+| `team.html` | Team - UI Kit — AI Startup Agency HTML Template | People behind UI Kit; People behind UI Kit; Alex Morgan; Jamie Lee | 1 | 8 |
+| `terms.html` | Terms and Conditions - UI Kit — AI Startup Agency HTML Template | Terms & Conditions; Acceptance of Terms; Use of Services; Intellectual Property | 1 | 2 |
+| `testimonial.html` | Testimonials - UI Kit — AI Startup Agency HTML Template | Testimonials; What our clients say | 1 | 8 |
 
 ## AI generation rules
 
@@ -383,4 +383,4 @@ The stylesheet explicitly references `Outfit` and `Space Grotesk`; the public Go
 
 ## Provenance and rights
 
-Source URL: https://demo.themeshawk.com/html/techarin/index.html. The archive contains publicly accessible template material fetched for research and UI analysis. Before using it in a product, confirm the template license and rights for code, assets, fonts, icons, images, text, and brand elements. Do not represent this extracted material as an original design system or as permission to redistribute the vendor’s template.
+Source URL: https://demo.themeshawk.com/html/ui-kit/index.html. The archive contains publicly accessible template material fetched for research and UI analysis. Before using it in a product, confirm the template license and rights for code, assets, fonts, icons, images, text, and brand elements. Do not represent this extracted material as an original design system or as permission to redistribute the vendor’s template.
