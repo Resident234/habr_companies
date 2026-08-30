@@ -1,194 +1,58 @@
+/* Techarin UI kit styles for content-script surfaces. */
 .habr-companies-bar {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    z-index: 2147483647 !important;
-    text-align: center !important;
-    padding: 10px 0 !important;
-    font-size: 14px !important;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-    line-height: 1.4 !important;
-    box-sizing: border-box !important;
-    opacity: 1 !important;
-    transition: opacity 0.3s ease-out !important;
+    align-items: center !important;
+    backdrop-filter: blur(18px) !important;
+    background: linear-gradient(110deg, rgba(15, 23, 42, 0.96), rgba(49, 46, 129, 0.9)) !important;
+    border: 1px solid rgba(167, 139, 250, 0.34) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 18px 45px rgba(2, 6, 23, 0.35) !important;
+    color: #f1f5f9 !important;
+    display: flex !important;
+    font: 600 13px/1.4 Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+    left: 50% !important;
+    max-width: min(560px, calc(100vw - 32px)) !important;
+    padding: 11px 18px !important;
     pointer-events: none !important;
+    position: fixed !important;
+    text-align: center !important;
+    top: 16px !important;
+    transform: translateX(-50%) !important;
+    transition: opacity 180ms ease, transform 180ms ease !important;
+    width: max-content !important;
+    z-index: 2147483647 !important;
 }
+.habr-companies-bar--success { border-color: rgba(52, 211, 153, 0.58) !important; }
+.habr-companies-bar--error { border-color: rgba(251, 113, 133, 0.62) !important; }
+.habr-companies-bar--info { border-color: rgba(34, 211, 238, 0.52) !important; }
+.habr-companies-bar--hidden { opacity: 0 !important; transform: translate(-50%, -8px) !important; }
 
-.habr-companies-bar--success {
-    background-color: #2e7d32 !important;
-    color: #ffffff !important;
-}
+.habr-status-badges { align-items: center !important; display: inline-flex !important; flex-wrap: wrap !important; gap: 6px !important; margin-left: 10px !important; vertical-align: middle !important; }
+.habr-status-badges--article, .habr-status-badges--post-page, .habr-status-badges--post { display: flex !important; flex-wrap: wrap !important; gap: 7px !important; margin: 9px 0 13px !important; }
+.habr-status-badges--post-page .habr-status-badge, .habr-status-badges--post .habr-status-badge { font-size: 11px !important; padding: 4px 7px !important; }
+.habr-status-badge { align-items: center !important; backdrop-filter: blur(12px) !important; background: rgba(15, 23, 42, 0.88) !important; border: 1px solid rgba(148, 163, 184, 0.24) !important; border-radius: 999px !important; box-shadow: 0 8px 20px rgba(2, 6, 23, 0.16) !important; color: #cbd5e1 !important; display: inline-flex !important; font: 600 12px/1.2 Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important; gap: 6px !important; padding: 5px 7px !important; white-space: nowrap !important; }
+.habr-status-badge__text { color: inherit !important; }
+.habr-status-badge__nav { align-items: center !important; background: rgba(148, 163, 184, 0.11) !important; border: 1px solid rgba(148, 163, 184, 0.2) !important; border-radius: 999px !important; color: #cbd5e1 !important; cursor: pointer !important; display: inline-flex !important; font-size: 10px !important; height: 20px !important; justify-content: center !important; opacity: 0.82 !important; padding: 0 !important; transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, opacity 150ms ease !important; width: 20px !important; }
+.habr-status-badge__nav:hover:not(:disabled) { background: rgba(167, 139, 250, 0.25) !important; border-color: rgba(167, 139, 250, 0.58) !important; color: #fff !important; opacity: 1 !important; }
+.habr-status-badge__nav:disabled { cursor: wait !important; opacity: 0.35 !important; }
+.habr-status-badge__dot { border-radius: 50% !important; flex-shrink: 0 !important; height: 7px !important; width: 7px !important; }
+.habr-status-badge--unprocessed { border-color: rgba(148, 163, 184, 0.36) !important; }
+.habr-status-badge--unprocessed .habr-status-badge__dot { background: #94a3b8 !important; }
+.habr-status-badge--backlog { border-color: rgba(34, 211, 238, 0.44) !important; color: #a5f3fc !important; }
+.habr-status-badge--backlog .habr-status-badge__dot { background: #22d3ee !important; }
+.habr-status-badge--in_progress { border-color: rgba(251, 191, 36, 0.48) !important; color: #fde68a !important; }
+.habr-status-badge--in_progress .habr-status-badge__dot { background: #fbbf24 !important; }
+.habr-status-badge--done { border-color: rgba(52, 211, 153, 0.48) !important; color: #a7f3d0 !important; }
+.habr-status-badge--done .habr-status-badge__dot { background: #34d399 !important; }
+.habr-status-badge--rejected { border-color: rgba(251, 113, 133, 0.52) !important; color: #fecdd3 !important; }
+.habr-status-badge--rejected .habr-status-badge__dot { background: #fb7185 !important; }
 
-.habr-companies-bar--error {
-    background-color: #c62828 !important;
-    color: #ffffff !important;
-}
-
-.habr-companies-bar--info {
-    background-color: #1565c0 !important;
-    color: #ffffff !important;
-}
-
-.habr-companies-bar--hidden {
-    opacity: 0 !important;
-}
-
-/* === Status badges === */
-
-.habr-status-badges {
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 6px !important;
-    margin-left: 10px !important;
-    vertical-align: middle !important;
-}
-
-/* Бейджи статьи — под заголовком (h1.tm-title), на отдельной строке */
-.habr-status-badges--article {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    gap: 8px !important;
-    margin: 8px 0 12px 0 !important;
-}
-
-/* Бейджи на детальной странице поста — инлайн после заголовка в .article-formatted-body */
-.habr-status-badges--post-page {
-    display: inline-flex !important;
-    flex-wrap: wrap !important;
-    gap: 6px !important;
-    margin-left: 10px !important;
-    vertical-align: middle !important;
-}
-
-.habr-status-badges--post-page .habr-status-badge {
-    padding: 1px 8px !important;
-    font-size: 12px !important;
-    line-height: 1.5 !important;
-    font-weight: 500 !important;
-}
-
-/* Бейджи поста в списке постов компании — после заголовка, компактнее */
-.habr-status-badges--post {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    gap: 4px !important;
-    margin: 6px 0 !important;
-    max-width: 100% !important;
-}
-
-.habr-status-badges--post .habr-status-badge {
-    padding: 1px 8px !important;
-    font-size: 11px !important;
-    line-height: 1.5 !important;
-}
-
-.habr-status-badges--post .habr-status-badge__dot {
-    width: 6px !important;
-    height: 6px !important;
-}
-
-.habr-status-badge {
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 5px !important;
-    padding: 2px 10px !important;
-    border-radius: 12px !important;
-    font-size: 12px !important;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-    font-weight: 500 !important;
-    line-height: 1.6 !important;
-    white-space: nowrap !important;
-    cursor: default !important;
-    border: 1px solid transparent !important;
-}
-
-/* Кнопки «Назад»/«Вперёд» внутри бейджа */
-.habr-status-badge__nav {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 16px !important;
-    height: 16px !important;
-    padding: 0 !important;
-    border: none !important;
-    background: transparent !important;
-    color: inherit !important;
-    font-size: 10px !important;
-    line-height: 1 !important;
-    cursor: pointer !important;
-    opacity: 0.4 !important;
-    border-radius: 3px !important;
-    flex-shrink: 0 !important;
-    transition: opacity 0.15s ease !important;
-}
-
-.habr-status-badge__nav:hover:not(:disabled) {
-    opacity: 1 !important;
-}
-
-.habr-status-badge__nav:disabled {
-    opacity: 0.15 !important;
-    cursor: wait !important;
-}
-
-.habr-status-badge__nav::before {
-    content: '' !important;
-}
-
-.habr-status-badge__dot {
-    width: 7px !important;
-    height: 7px !important;
-    border-radius: 50% !important;
-    flex-shrink: 0 !important;
-}
-
-/* unprocessed — серый */
-.habr-status-badge--unprocessed {
-    background-color: #f0f0f0 !important;
-    color: #555 !important;
-    border-color: #d9d9d9 !important;
-}
-.habr-status-badge--unprocessed .habr-status-badge__dot {
-    background-color: #999 !important;
-}
-
-/* backlog — синий */
-.habr-status-badge--backlog {
-    background-color: #e3f2fd !important;
-    color: #1565c0 !important;
-    border-color: #90caf9 !important;
-}
-.habr-status-badge--backlog .habr-status-badge__dot {
-    background-color: #1976d2 !important;
-}
-
-/* in_progress — оранжевый */
-.habr-status-badge--in_progress {
-    background-color: #fff3e0 !important;
-    color: #e65100 !important;
-    border-color: #ffcc80 !important;
-}
-.habr-status-badge--in_progress .habr-status-badge__dot {
-    background-color: #f57c00 !important;
-}
-
-/* done — зелёный */
-.habr-status-badge--done {
-    background-color: #e8f5e9 !important;
-    color: #2e7d32 !important;
-    border-color: #a5d6a7 !important;
-}
-.habr-status-badge--done .habr-status-badge__dot {
-    background-color: #43a047 !important;
-}
-
-/* rejected — красный */
-.habr-status-badge--rejected {
-    background-color: #ffebee !important;
-    color: #c62828 !important;
-    border-color: #ef9a9a !important;
-}
-.habr-status-badge--rejected .habr-status-badge__dot {
-    background-color: #e53935 !important;
-}
+.habr-selection-panel { align-items: center; backdrop-filter: blur(18px); background: linear-gradient(110deg, rgba(15, 23, 42, 0.96), rgba(49, 46, 129, 0.92)); border: 1px solid rgba(167, 139, 250, 0.38); border-radius: 14px; box-shadow: 0 18px 45px rgba(2, 6, 23, 0.4); display: flex; gap: 6px; padding: 7px; position: fixed; z-index: 2147483647; }
+.habr-selection-panel__button, .habr-selection-panel__close { border-radius: 9px; cursor: pointer; font: 600 12px/1.2 Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; transition: background 150ms ease, border-color 150ms ease, color 150ms ease, transform 150ms ease; }
+.habr-selection-panel__button { background: rgba(139, 92, 246, 0.18); border: 1px solid rgba(167, 139, 250, 0.42); color: #f5f3ff; padding: 7px 11px; }
+.habr-selection-panel__button:hover { background: rgba(139, 92, 246, 0.36); border-color: rgba(196, 181, 253, 0.78); transform: translateY(-1px); }
+.habr-selection-panel__button--industry { background: rgba(34, 211, 238, 0.12); border-color: rgba(34, 211, 238, 0.4); color: #cffafe; }
+.habr-selection-panel__button--industry:hover { background: rgba(34, 211, 238, 0.24); border-color: rgba(103, 232, 249, 0.76); }
+.habr-selection-panel__close { align-items: center; background: transparent; border: 1px solid transparent; color: #94a3b8; display: inline-flex; font-size: 18px; height: 28px; justify-content: center; line-height: 1; padding: 0; width: 28px; }
+.habr-selection-panel__close:hover { background: rgba(148, 163, 184, 0.12); border-color: rgba(148, 163, 184, 0.3); color: #fff; }
+.habr-selection-panel--success { border-color: rgba(52, 211, 153, 0.72); }
+.habr-selection-panel--error { border-color: rgba(251, 113, 133, 0.72); }

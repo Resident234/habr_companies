@@ -7,65 +7,27 @@ const PANEL_GAP = 6;
 function createPanel() {
     panel = document.createElement('div');
     panel.id = 'habr-companies-selection-panel';
-    panel.style.cssText = `
-        position: fixed;
-        display: none;
-        gap: 6px;
-        padding: 6px 10px;
-        background: #1a1a2e;
-        border: 1px solid #333;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        z-index: 2147483647;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        font-size: 13px;
-        align-items: center;
-        white-space: nowrap;
-    `;
+    panel.className = 'habr-selection-panel';
 
     const btnCompany = document.createElement('button');
-    btnCompany.textContent = '🏢 Компания';
-    btnCompany.style.cssText = `
-        padding: 4px 10px;
-        border: none;
-        border-radius: 5px;
-        background: #4361ee;
-        color: white;
-        cursor: pointer;
-        font-size: 12px;
-        transition: background 0.2s;
-    `;
-    btnCompany.onmouseenter = () => btnCompany.style.background = '#3a56d4';
-    btnCompany.onmouseleave = () => btnCompany.style.background = '#4361ee';
+    btnCompany.className = 'habr-selection-panel__button habr-selection-panel__button--company';
+    btnCompany.type = 'button';
+    btnCompany.textContent = 'Компания';
+    btnCompany.setAttribute('aria-label', 'Сохранить выделение как компанию');
     btnCompany.onclick = () => saveSelection('company');
 
     const btnCategory = document.createElement('button');
-    btnCategory.textContent = '📂 Отрасль';
-    btnCategory.style.cssText = `
-        padding: 4px 10px;
-        border: none;
-        border-radius: 5px;
-        background: #f72585;
-        color: white;
-        cursor: pointer;
-        font-size: 12px;
-        transition: background 0.2s;
-    `;
-    btnCategory.onmouseenter = () => btnCategory.style.background = '#d91e74';
-    btnCategory.onmouseleave = () => btnCategory.style.background = '#f72585';
+    btnCategory.className = 'habr-selection-panel__button habr-selection-panel__button--industry';
+    btnCategory.type = 'button';
+    btnCategory.textContent = 'Отрасль';
+    btnCategory.setAttribute('aria-label', 'Сохранить выделение как отрасль');
     btnCategory.onclick = () => saveSelection('category');
 
-    const closeBtn = document.createElement('span');
-    closeBtn.textContent = '✕';
-    closeBtn.style.cssText = `
-        margin-left: 4px;
-        cursor: pointer;
-        color: #888;
-        font-size: 14px;
-        line-height: 1;
-    `;
-    closeBtn.onmouseenter = () => closeBtn.style.color = '#fff';
-    closeBtn.onmouseleave = () => closeBtn.style.color = '#888';
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'habr-selection-panel__close';
+    closeBtn.type = 'button';
+    closeBtn.textContent = '×';
+    closeBtn.setAttribute('aria-label', 'Закрыть панель');
     closeBtn.onclick = hidePanel;
 
     panel.appendChild(btnCompany);
@@ -145,10 +107,11 @@ async function saveSelection(type) {
     // Show feedback
     const originalDisplay = panel.style.display;
     const success = result.ok;
-    panel.style.background = success ? '#2e7d32' : '#c62828';
+    panel.classList.toggle('habr-selection-panel--success', success);
+    panel.classList.toggle('habr-selection-panel--error', !success);
 
     setTimeout(() => {
-        panel.style.background = '#1a1a2e';
+        panel.classList.remove('habr-selection-panel--success', 'habr-selection-panel--error');
         hidePanel();
     }, 1500);
 }
