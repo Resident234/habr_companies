@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Service Single - Techarin — AI Startup Agency HTML Template</title>
+  <meta name="description" content="Techarin is a modern creative digital agency HTML template powered by Tailwind CSS, GSAP, and Lenis smooth scrolling." />
+
+  <!-- Tailwind CSS CDN (for rapid prototyping; for production use a compiled build) -->  
+  <link href="src/output.css" rel="stylesheet" />
+  <link href="src/style-tailwind.css" rel="stylesheet" />
+ <link rel="icon" type="image/png" href="assets/img/favicon.png">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+
+  <!-- Custom global styles -->
+  <!-- Add the slick-theme.css if you want default styling -->
+<link rel="stylesheet" type="text/css" href="assets/slick/css/slick.css"/>
+<!-- Add the slick-theme.css if you want default styling -->
+<link rel="stylesheet" type="text/css" href="assets/slick/css/slick-theme.css"/>
+  <link rel="stylesheet" href="assets/animate/css/animate.css" />
+  <link rel="stylesheet" href="assets/hover/css/hover.css" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body class="bg-slate-950 text-slate-100 antialiased">
+    <!-- Preloader -->
+    <div id="preloader" role="status" aria-live="polite" aria-label="Loading page">
+      <div class="preloader__box"> 
+        <!-- Optional logo / brand name -->
+        <div class="preloader__logo" aria-hidden="true">Techarin</div>
+
+        <!-- SVG spinner -->
+        <div class="preloader__spinner" aria-hidden="true">
+          <svg viewBox="0 0 50 50" role="img" focusable="false" aria-hidden="true"> 
+            <!-- Background circle (subtle) -->
+            <circle cx="25" cy="25" r="20" stroke="rgba(255,255,255,0.05)" stroke-width="4" fill="none"></circle>
+            <!-- Animated path -->
+            <path class="path" d="M25 5 a20 20 0 0 1 0 40 a20 20 0 0 1 0 -40" />
+          </svg>
+        </div>
+
+        <!-- Small helper text -->
+        <div class="preloader__text">Wait a moment while we are loading for you…</div>
+      </div>
+    </div>
+    <div class="cursor"></div>
+	<div class="cursor2"></div>
+
+  <!-- Smooth scroll root for Lenis (default: documentElement/body) -->
+
+  <!-- ==========================
+       GLOBAL PAGE WRAPPER
+       ========================== -->
+  <div class="min-h-screen flex flex-col">
+
+    <!-- ==========================
+         HEADER / NAVBAR
+         Reusable: copy this header to other pages.
+         ========================== -->
+    <header class="fixed inset-x-0 top-0 z-40 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex h-16 items-center justify-between">
+
+          <!-- Logo -->
+          <a href="index.html" class="inline-flex items-center gap-2">
+            <img class="logo logo-header" src="assets/img/logo.png" alt="Logo">
+          </a>
+
+          <!-- Desktop Navigation -->
+        <nav class="hidden md:flex items-center gap-10 text-sm font-medium text-slate-200 justify-center">
+
+          <!-- Home Dropdown -->
+          <div class="relative group dropdown py-5 flex items-center justify-center">
+            <a href="index.html" class="inline-flex items-center gap-1 hover:text-white transition-colors">
+              Home
+              <svg class="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-180"
+                   viewBox="0 0 24 24" fill="none">
+                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+            </a>
+
+            <div class="absolute top-full mt-0 w-56 opacity-0 invisible
+                        group-hover:visible group-hover:opacity-100
+                        transition-all duration-200
+                        bg-slate-900/90 backdrop-blur-xl border border-slate-800
+                        rounded-xl shadow-xl p-3 space-y-2 effect-25">
+              <a href="index.html" class="block px-3 py-2 rounded-lg hover:bg-slate-800/60">Home Main</a>
+              <a href="home-single.html" class="block px-3 py-2 rounded-lg hover:bg-slate-800/60">Home Single</a>
+              <a href="home-video.html" class="block px-3 py-2 rounded-lg hover:bg-slate-800/60">Home Video</a>
+              <a href="home-slider.html" class="block px-3 py-2 rounded-lg hover:bg-slate-800/60">Home Slider</a>
+              <a href="home-hero-image.html" class="block px-3 py-2 rounded-lg hover:bg-slate-800/60">Home Hero Image</a>
+              <a href="home-rtl.html" class="block px-3 py-2 rounded-lg hover:bg-slate-800/60">Home RTL</a>
+              <a href="home-light.html" class="block px-3 py-2 rounded-lg hover:bg-slate-800/60">Home Light</a>
+            </div>
+          </div>
+
+          <!-- Services Dropdown -->
+          <div class="relative group dropdown py-5 flex items-center justify-center">
+            <a href="services.html" class="inline-flex items-center gap-1 hover:text-white transition-colors">
+              Services
+              <svg class="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-180"
+                   viewBox="0 0 24 24" fill="none">
+                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+            </a>
+
+            <div class="absolute top-full mt-0 w-48 opacity-0 invisible
+                        group-hover:visible group-hover:opacity-100
+                        transition-all duration-200
+                        bg-slate-900/90 backdrop-blur-xl border border-slate-800
+                        rounded-xl shadow-xl p-3 space-y-2 effect-25">
+              <a href="services.html" class="block px-3 py-2 rounded-lg hover:bg-slate-800/60">Services Grid</a>
+              <a href="service-single.html" class="block px-3 py-2 rounded-lg hover:bg-slate-800/60">Service Single</a>
+            </div>
+          </div>
+
+          <!-- Portfolio Dropdown -->
+          <div class="relative group dropdown py-5 flex items-center justify-center">
+            <a href="portfolio.html" class="inline-flex items-center gap-1 hover:text-white transition-colors">
+              Portfolio
+              <svg class="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-180"
+                   viewBox="0 0 24 24" fill="none">
+                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+            </a>
+
+            <div class="absolute top-full mt-0 w-56 opacity-0 invisible
+                        group-hover:visible group-hover:opacity-100
+                        transition-all duration-200
+                        bg-slate-900/90 backdrop-blur-xl border border-slate-800
+                        rounded-xl shadow-xl p-3 space-y-2 effect-25">
+              <a href="portfolio.html" class="block px-3 py-2 rounded-lg hover:bg-slate-800/60">Portfolio Grid</a>
+              <a href="portfolio-v2.html" class="block px-3 py-2 rounded-lg hover:bg-slate-800/60">Portfolio Grid v2</a>
+              <a href="portfolio-single.html" class="block px-3 py-2 rounded-lg hover:bg-slate-800/60">Portfolio Single</a>
+            </div>
+          </div>
+
+          <!-- Team Dropdown -->
+          <div class="relative group dropdown py-5 flex items-center justify-center">
+            <a href="team.html" class="inline-flex items-center gap-1 hover:text-white transition-colors">
+              Team
+              <svg class="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-180"
+                   viewBox="0 0 24 24" fill="none">
+                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+            </a>
+
+            <div class="absolute top-full mt-0 w-48 opacity-0 invisible
+                        group-hover:visible group-hover:opacity-100
+                        transition-all duration-200
+                        bg-slate-900/90 backdrop-blur-xl border border-slate-800
+                        rounded-xl shadow-xl p-3 space-y-2 effect-25">
+              <a href="team.html" class="block px-3 py-2 rounded-lg hover:bg-slate-800/60">Team Grid</a>
+              <a href="team-v2.html" class="block px-3 py-2 rounded-lg hover:bg-slate-800/60">Team Grid v2</a>
+              <a href="team-single.html" class="block px-3 py-2 rounded-lg hover:bg-slate-800/60">Team Single</a>
+            </div>
+          </div>
+
+          <!-- Blog Dropdown -->
+          <div class="relative group dropdown py-5 flex items-center justify-center">
+            <a href="blog.html" class="inline-flex items-center gap-1 hover:text-white transition-colors">
+              Blog
+              <svg class="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-180"
+                   viewBox="0 0 24 24" fill="none">
+                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+            </a>
+
+            <div class="absolute top-full mt-0 w-48 opacity-0 invisible
+                        group-hover:visible group-hover:opacity-100
+                        transition-all duration-200
+                        bg-slate-900/90 backdrop-blur-xl border border-slate-800
+                        rounded-xl shadow-xl p-3 space-y-2 effect-25">
+              <a href="blog.html" class="block px-3 py-2 rounded-lg hover:bg-slate-800/60">Blog Grid</a>
+              <a href="blog-single.html" class="block px-3 py-2 rounded-lg hover:bg-slate-800/60">Blog Single</a>
+            </div>
+          </div>
+
+          <!-- Mega Menu -->
+          <div class="relative group dropdown py-5 flex items-center justify-center">
+            <a href="portfolio.html" class="inline-flex items-center gap-1 hover:text-white transition-colors">
+              Features
+              <svg class="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-180"
+                   viewBox="0 0 24 24" fill="none">
+                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+            </a>
+
+            <div class="absolute top-full mt-0 w-[650px] opacity-0 invisible
+                        group-hover:visible group-hover:opacity-100
+                        transition-all duration-300
+                        bg-slate-900/95 backdrop-blur-xl border border-slate-800
+                        rounded-2xl shadow-2xl p-8 effect-25">
+
+                  <div class="grid grid-cols-3 gap-8">
+
+                      <div>
+                        <h4 class="text-sm font-semibold text-slate-300 mb-3">Shop</h4>
+                        <ul class="space-y-2 text-slate-400 text-sm">
+                          <li><a href="shop.html" class="hover:text-brand-300">Shop</a></li>
+                          <li><a href="product.html" class="hover:text-brand-300">Product</a></li>
+                          <li><a href="cart.html" class="hover:text-brand-300">Cart</a></li>
+                          <li><a href="checkout.html" class="hover:text-brand-300">Checkout</a></li>
+                        </ul>
+                      </div>
+
+                      <div>
+                        <h4 class="text-sm font-semibold text-slate-300 mb-3">Pages</h4>
+                        <ul class="space-y-2 text-slate-400 text-sm">
+                          <li><a href="404.html" class="hover:text-brand-300">404</a></li>
+                          <li><a href="about.html" class="hover:text-brand-300">About</a></li>
+                          <li><a href="faq.html" class="hover:text-brand-300">FAQ</a></li>
+                          <li><a href="image-gallery.html" class="hover:text-brand-300">Image Gallery</a></li>
+                          <li><a href="image-gallery-advanced.html" class="hover:text-brand-300">Image Gallery v2</a></li>
+                        </ul>
+                      </div>
+
+                      <div>
+                        <h4 class="text-sm font-semibold text-slate-300 mb-3">More Pages</h4>
+                        <ul class="space-y-2 text-slate-400 text-sm">
+                          <li><a href="newsletter.html" class="hover:text-brand-300">Newsletter</a></li>
+                          <li><a href="pricing.html" class="hover:text-brand-300">Pricing</a></li>
+                          <li><a href="testimonial.html" class="hover:text-brand-300">Testimonials</a></li>
+                          <li><a href="privacy-policy.html" class="hover:text-brand-300">Privacy Policy</a></li>
+                          <li><a href="terms.html" class="hover:text-brand-300">Terms</a></li>
+                        </ul>
+                      </div>
+
+                 </div>
+           </div>
+          </div>
+
+          <a href="contact.html" class="hover:text-white transition-colors">Contact</a>
+
+        </nav>
+
+
+          <!-- CTA + Mobile menu toggle -->
+          <div class="flex items-center gap-3">
+            <a href="portfolio.html#contact" class="hidden sm:inline-flex items-center rounded-full border border-brand-500/60 bg-brand-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-brand-100 hover:bg-brand-500/20 transition-colors glass-bg">
+              Start a project
+            </a>
+
+            <!-- Mobile toggle -->
+            <button
+              class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-700 bg-slate-900/80 text-slate-100 hover:border-slate-500 md:hidden"
+              type="button"
+              data-mobile-nav-toggle
+            >
+              <svg class="h-5 w-5" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="1.5"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+      
+    <!-- Mobile Overlay -->
+    <div
+      id="mobileOverlay"
+      class="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm
+             opacity-0 pointer-events-none transition-opacity duration-300 md:hidden">
+    </div>
+
+    <!-- Mobile Sidebar -->
+    <aside
+      id="mobileSidebar"
+      class="fixed top-0 z-50 h-full w-[85%] max-w-sm
+             bg-slate-950/95 backdrop-blur-xl border-l border-slate-800
+             transition-all duration-300 md:hidden"
+      style="right:-100%;"
+    >
+      <!-- Header -->
+      <div class="flex items-center justify-between px-5 h-16 border-b border-slate-800">
+        <span class="font-display text-lg text-white">Menu</span>
+        <button
+          id="closeSidebar"
+          type="button"
+          class="h-9 w-9 rounded-full border border-slate-700
+                 flex items-center justify-center text-slate-200">
+          ✕
+        </button>
+      </div>
+
+      <!-- Nav -->
+      <nav class="flex flex-col px-5 py-6 text-sm font-medium text-slate-200 space-y-2">
+        <a href="index.html" class="py-2 border-b border-slate-800/60">Home</a>
+        <a href="services.html" class="py-2 border-b border-slate-800/60">Services</a>
+        <a href="portfolio.html" class="py-2 border-b border-slate-800/60">Portfolio</a>
+        <a href="team.html" class="py-2 border-b border-slate-800/60">Team</a>
+        <a href="blog.html" class="py-2 border-b border-slate-800/60">Blog</a>
+        <a href="contact.html" class="py-2">Contact</a>
+
+        <a
+          href="portfolio.html#contact"
+          class="mt-6 inline-flex justify-center rounded-full
+                 border border-brand-500/60 bg-brand-500/10
+                 px-4 py-2 text-xs font-semibold uppercase tracking-wide
+                 text-brand-100">
+          Start a project
+        </a>
+      </nav>
+    </aside>
+    <div class="h-16"></div>
+    <main class="flex-1">
+        
+    <!-- BREADCRUMB -->
+    <section class="border-b border-slate-800 bg-slate-950 breadcrumb-bg cta-bg">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-40 text-center cta-wrapper">
+
+          <nav class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-xl text-sm text-slate-300 glass-bg" aria-label="Breadcrumb">
+            <a href="index.html" class="hover:text-white transition-colors">Home</a>
+            <span class="text-slate-500">/</span>
+            <a href="shop.html" class="hover:text-white transition-colors">Pages</a>
+            <span class="text-slate-500">/</span>
+            <span class="text-white font-medium">Selected projects and collaborations.</span>
+          </nav>
+
+          <!-- Page Title -->
+          <h1 class="font-display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-white mt-10 text-anim cursor-scale" id="text-anim-breadcrumb" data-effect="glitch">
+              Selected projects and collaborations.
+          </h1>
+
+          <!-- Optional subtitle -->
+          <p class="mt-3 text-sm sm:text-base text-slate-400 max-w-2xl mx-auto">
+             A small sample of the brands, teams, and products we've partnered with. Use this page as a reusable layout for case studies or work categories.
+          </p>
+
+      </div>
+    </section>
+      <section class="py-16 sm:py-20 lg:py-24">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="max-w-3xl" data-animate="fade-up">
+            <p class="text-xs font-semibold uppercase tracking-[0.3em] text-brand-400/90">Work</p>
+            <h1 class="mt-3 font-display text-3xl sm:text-4xl font-semibold tracking-tight text-white cursor-scale text-anim" id="text-anim" data-effect="glitch">
+              Selected projects and collaborations.
+            </h1>
+            <p class="mt-4 text-sm sm:text-base text-slate-300">
+              A small sample of the brands, teams, and products we&apos;ve partnered with. Use this page as a reusable layout for case studies or work categories.
+            </p>
+          </div>
+
+          <!-- Filter pills (static; you can hook into JS for filtering) -->
+          <div class="mt-8 flex flex-wrap gap-2 text-xs" data-animate="fade-up">
+            <button class="rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1 text-slate-200">All</button>
+            <button class="rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1 text-slate-200">Brand</button>
+            <button class="rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1 text-slate-200">Product</button>
+            <button class="rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1 text-slate-200">Web</button>
+            <button class="rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1 text-slate-200">Motion</button>
+          </div>
+
+          <!-- Work grid -->
+          <div class="mt-10 grid gap-6 md:grid-cols-2">
+            <!-- Reusable project card -->
+            <article class="group relative overflow-hidden rounded-2xl border border-slate-800/70 bg-slate-900/80" data-animate="fade-up">
+              <div class="relative overflow-hidden">
+                <div class="card-image">
+                <img
+                  src="assets/img/square/12.jpg"
+                  alt="Interface design concept"
+                  class="h-100 w-full th-post-card-image"
+                />
+                <img
+                  src="assets/img/square/12.jpg"
+                  alt="Interface design concept"
+                  class="h-100 w-full th-post-card-image"
+                />
+                </div>
+                <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent"></div>
+                <div class="absolute inset-x-5 bottom-5 flex items-center justify-between text-xs text-slate-200">
+                  <span class="rounded-full px-3 py-1 uppercase tracking-wide backdrop-blur bounce glass">SaaS / Product</span>
+                  <span class="rounded-full px-3 py-1 uppercase tracking-wide backdrop-blur bounce glass">2024</span>
+                </div>
+              </div>
+              <div class="p-5">
+                <h2 class="font-display text-xl font-semibold text-white">Signal Cloud</h2>
+                <p class="mt-2 text-sm text-slate-300">
+                  A modular design system and responsive marketing experience for a data messaging platform.
+                </p>
+                <div class="mt-3 flex items-center justify-between text-xs text-slate-400">
+                  <span>Brand, Web, Product</span>
+                  <a href="portfolio-single.html" class="inline-flex items-center gap-1 text-brand-300 hover:text-brand-200">
+                    View case study
+                    <svg class="h-3 w-3" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M6 18L18 6M9 6h9v9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </a>
+                </div>
+              </div>
+            </article>
+
+            <article class="group relative overflow-hidden rounded-2xl border border-slate-800/70 bg-slate-900/80" data-animate="fade-up" data-delay="0.08">
+              <div class="relative overflow-hidden">
+                <div class="card-image">
+                <img
+                  src="assets/img/square/13.jpg"
+                  alt="Interface design concept"
+                  class="h-100 w-full th-post-card-image"
+                />
+                <img
+                  src="assets/img/square/13.jpg"
+                  alt="Interface design concept"
+                  class="h-100 w-full th-post-card-image"
+                />
+                </div>
+                <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent"></div>
+                <div class="absolute inset-x-5 bottom-5 flex items-center justify-between text-xs text-slate-200">
+                  <span class="rounded-full px-3 py-1 uppercase tracking-wide backdrop-blur bounce glass">Startup</span>
+                  <span class="rounded-full px-3 py-1 uppercase tracking-wide backdrop-blur bounce glass">2023</span>
+                </div>
+              </div>
+              <div class="p-5">
+                <h2 class="font-display text-xl font-semibold text-white">Northwind</h2>
+                <p class="mt-2 text-sm text-slate-300">
+                  Positioning, brand identity, and website for a remote-first engineering studio.
+                </p>
+                <div class="mt-3 flex items-center justify-between text-xs text-slate-400">
+                  <span>Brand, Web</span>
+                  <a href="portfolio-single.html" class="inline-flex items-center gap-1 text-brand-300 hover:text-brand-200">
+                    View case study
+                    <svg class="h-3 w-3" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M6 18L18 6M9 6h9v9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </a>
+                </div>
+              </div>
+            </article>
+
+            <article class="group relative overflow-hidden rounded-2xl border border-slate-800/70 bg-slate-900/80" data-animate="fade-up">
+              <div class="relative overflow-hidden">
+                <div class="card-image">
+                <img
+                  src="assets/img/square/16.jpg"
+                  alt="Interface design concept"
+                  class="h-100 w-full th-post-card-image"
+                />
+                <img
+                  src="assets/img/square/16.jpg"
+                  alt="Interface design concept"
+                  class="h-100 w-full th-post-card-image"
+                />
+                </div>
+                <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent"></div>
+                <div class="absolute inset-x-5 bottom-5 flex items-center justify-between text-xs text-slate-200">
+                  <span class="rounded-full px-3 py-1 uppercase tracking-wide backdrop-blur bounce glass">Hospitality</span>
+                  <span class="rounded-full px-3 py-1 uppercase tracking-wide backdrop-blur bounce glass">2022</span>
+                </div>
+              </div>
+              <div class="p-5">
+                <h2 class="font-display text-xl font-semibold text-white">Ember House</h2>
+                <p class="mt-2 text-sm text-slate-300">
+                  A cinematic, photography-driven site that captures the atmosphere of a modern restaurant.
+                </p>
+                <div class="mt-3 flex items-center justify-between text-xs text-slate-400">
+                  <span>Identity, Web</span>
+                  <a href="portfolio-single.html" class="inline-flex items-center gap-1 text-brand-300 hover:text-brand-200">
+                    View case study
+                    <svg class="h-3 w-3" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M6 18L18 6M9 6h9v9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </a>
+                </div>
+              </div>
+            </article>
+
+            <article class="group relative overflow-hidden rounded-2xl border border-slate-800/70 bg-slate-900/80" data-animate="fade-up" data-delay="0.08">
+              <div class="relative overflow-hidden">
+                <div class="card-image">
+                <img
+                  src="assets/img/square/17.jpg"
+                  alt="Interface design concept"
+                  class="h-100 w-full th-post-card-image"
+                />
+                <img
+                  src="assets/img/square/17.jpg"
+                  alt="Interface design concept"
+                  class="h-100 w-full th-post-card-image"
+                />
+                </div>
+                <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent"></div>
+                <div class="absolute inset-x-5 bottom-5 flex items-center justify-between text-xs text-slate-200">
+                  <span class="rounded-full px-3 py-1 uppercase tracking-wide backdrop-blur bounce glass">Conference</span>
+                  <span class="rounded-full px-3 py-1 uppercase tracking-wide backdrop-blur bounce glass">2021</span>
+                </div>
+              </div>
+              <div class="p-5">
+                <h2 class="font-display text-xl font-semibold text-white">Shift Summit</h2>
+                <p class="mt-2 text-sm text-slate-300">
+                  Event identity and motion graphics package for a tech innovation summit.
+                </p>
+                <div class="mt-3 flex items-center justify-between text-xs text-slate-400">
+                  <span>Brand, Motion</span>
+                  <a href="portfolio-single.html" class="inline-flex items-center gap-1 text-brand-300 hover:text-brand-200">
+                    View case study
+                    <svg class="h-3 w-3" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M6 18L18 6M9 6h9v9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </a>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+   <!-- ==========================
+         FOOTER
+         ========================== -->
+    <footer class="border-t border-slate-800/80 bg-slate-950/95">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+
+        <!-- Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-4 lg:grid-cols-4 gap-12">
+
+          <!-- Column 1: Brand -->
+          <div>
+            <div class="flex items-center gap-2 mb-4">
+              <img class="logo logo-header" src="assets/img/logo.png" alt="Logo">
+            </div>
+            <p class="text-sm text-slate-400 leading-relaxed">
+              Design-forward digital studio crafting high-performance
+              experiences for modern brands.
+            </p>
+          </div>
+
+          <!-- Column 2: Company -->
+          <div>
+            <h4 class="text-sm font-semibold uppercase tracking-wide text-slate-300 mb-4">
+              Company
+            </h4>
+            <ul class="space-y-3 text-sm text-slate-400">
+              <li><a href="portfolio.html#" class="hover:text-white transition">About us</a></li>
+              <li><a href="portfolio.html#" class="hover:text-white transition">Careers</a></li>
+              <li><a href="portfolio.html#" class="hover:text-white transition">Blog</a></li>
+              <li><a href="portfolio.html#" class="hover:text-white transition">Contact</a></li>
+            </ul>
+          </div>
+
+          <!-- Column 3: Services -->
+          <div>
+            <h4 class="text-sm font-semibold uppercase tracking-wide text-slate-300 mb-4">
+              Services
+            </h4>
+            <ul class="space-y-3 text-sm text-slate-400">
+              <li><a href="portfolio.html#" class="hover:text-white transition">UI / UX Design</a></li>
+              <li><a href="portfolio.html#" class="hover:text-white transition">Web Development</a></li>
+              <li><a href="portfolio.html#" class="hover:text-white transition">Shopify Solutions</a></li>
+              <li><a href="portfolio.html#" class="hover:text-white transition">Brand Strategy</a></li>
+            </ul>
+          </div>
+
+          <!-- Column 4: Newsletter -->
+          <div>
+            <h4 class="text-sm font-semibold uppercase tracking-wide text-slate-300 mb-4">
+              Newsletter
+            </h4>
+            <p class="text-sm text-slate-400 mb-4">
+              Get insights, tips and product updates delivered straight to your inbox.
+            </p>
+
+            <form class="flex gap-2">
+              <input
+                type="email"
+                placeholder="Email address"
+                class="w-full rounded-full bg-slate-900/70 border border-slate-700
+                       px-4 py-2 text-sm text-white placeholder-slate-500
+                       focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+              <button
+                type="submit"
+                class="shrink-0 rounded-full bg-brand-500 px-4 py-2
+                       text-sm font-semibold text-slate-950 hover:bg-brand-400 transition"
+              >
+                →
+              </button>
+            </form>
+          </div>
+
+        </div>
+
+        <!-- Bottom -->
+        <div class="mt-14 pt-8 border-t border-slate-800/80
+                    flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p class="text-xs text-slate-500">
+            © <span id="year">2025</span> Techarin. All rights reserved.
+          </p>
+
+          <div class="flex items-center gap-4 text-xs text-slate-400">
+            <a href="portfolio.html#" class="hover:text-white transition">Privacy</a>
+            <a href="portfolio.html#" class="hover:text-white transition">Terms</a>
+            <a href="portfolio.html#" class="hover:text-white transition">Imprint</a>
+          </div>
+        </div>
+
+      </div>
+    </footer>
+
+  </div>
+    
+  <button onclick="topFunction()" id="GoToTop" class="gototop round-btn" title="Go to top">	
+	<svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"> <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m16 17-4-4-4 4m8-6-4-4-4 4"></path></svg>  
+  </button>
+
+  <!-- ==========================
+       SCRIPTS
+       ========================== -->
+ <script src="assets/js/jquery.min.js"></script> 
+
+  <!-- GSAP Core + ScrollTrigger plugin -->
+  <script src="assets/gsap/all.min.js"></script>
+    
+  <!-- Lenis smooth scroll -->
+  <!--<script src="assets/lenis/lenis.min.js"></script>-->
+
+  <script src="assets/slick/js/slick.min.js"></script>
+  <!-- Main template JS: shared across pages -->
+  
+  <script src="assets/js/hidden-text-heading-anim.js"></script>
+  <script src="assets/js/scroll-marquee.js"></script>
+  <script src="assets/js/button.js"></script>
+  <script src="assets/js/counter.js"></script>
+  <script src="assets/js/gsap-cursor.js"></script>
+  <script src="assets/js/smoothscroll-init.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/preloader.js"></script>  
+  <script src="assets/js/testimonials.js"></script> 
+  <script src="assets/js/cursor-text.js"></script> 
+  <script src="assets/slick/js/slick-animation.min.js"></script>       
+  <script src="assets/js/hero-slick.js"></script>       
+</body>
+</html>
