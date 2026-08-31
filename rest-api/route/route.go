@@ -80,6 +80,8 @@ func addCompany(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	code := vars["code"]
 	title := strings.TrimSpace(vars["title"])
+	// Приводим первую букву названия к заглавной
+	title = util.CapitalizeFirst(title)
 
 	if !validateCode(code) {
 		respondError(w, http.StatusBadRequest, "invalid code: must be 1-255 chars, only latin letters, digits, _, -")
