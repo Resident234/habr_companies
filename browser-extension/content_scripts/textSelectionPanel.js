@@ -70,11 +70,37 @@ function hidePanel() {
 }
 
 async function sendToAPI(endpoint, title) {
-    const baseUrl = CONFIG.DEFAULT_BASE_URL;
+    const api = globalThis.browser ?? globalThis.chrome;
+    let baseUrl;
+    try {
+        // First check storage (from previous session or completed detection)
+        const result = await api.storage.local.get('api_base_url');
+        if (result?.api_base_url) {
+            baseUrl = result.api_base_url;
+        } else {
+            // Poll background script for detected URL (max 5s timeout)
+            baseUrl = await Promise.race([
+                new Promise((resolve) => {
+                    const poll = () => {
+                        api.runtime.sendMessage({ type: 'GET_BASE_URL' }, (response) => {
+                            if (!api.runtime.lastError && response?.url) {
+                                resolve(response.url);
+                            }
+                        });
+                    };
+                    poll();
+                    const interval = setInterval(poll, 200);
+                    setTimeout(() => clearInterval(interval), 5000);
+                }),
+                new Promise((resolve) => setTimeout(() => resolve(CONFIG.DEFAULT_BASE_URL), 5000))
+            ]);
+        }
+    } catch {
+        baseUrl = CONFIG.DEFAULT_BASE_URL;
+    }
     const url = `${baseUrl}${endpoint}`;
 
     try {
-        const api = globalThis.browser ?? globalThis.chrome;
         const response = await api.runtime.sendMessage({
             type: 'FETCH_REQUEST',
             url,

@@ -3,4 +3,5 @@ export const CONFIG = {
     DEFAULT_BASE_URL: 'https://rippling-overwrite-attire.ngrok-free.dev',
     URL_PATTERN: 'https://habr.com/ru/companies/*',
     MESSAGE_DISPLAY_DURATION: 120000,
+    NGROK_CHECK_TIMEOUT_MS: 3000,
 };

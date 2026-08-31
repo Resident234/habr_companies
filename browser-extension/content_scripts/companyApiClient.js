@@ -1,6 +1,44 @@
 import { CONFIG } from '../config.js';
 import { BrowserStorage } from './browserStorage.js';
 
+// Module-level: resolves once background has detected the base URL
+const apiBasePromise = new Promise((resolve) => {
+    const api = globalThis.browser ?? globalThis.chrome;
+    // First check storage.local (from previous session / completed detection)
+    api.storage.local.get('api_base_url').then((result) => {
+        if (result?.api_base_url) {
+            resolve(result.api_base_url);
+            return;
+        }
+        // Storage empty — poll the background script for the detected URL
+        const poll = () => {
+            api.runtime.sendMessage({ type: 'GET_BASE_URL' }, (response) => {
+                if (!api.runtime.lastError && response?.url) {
+                    resolve(response.url);
+                }
+            });
+        };
+        poll();
+        // Retry every 200ms until we get a response (background is still detecting)
+        const interval = setInterval(poll, 200);
+        api.runtime.onMessage.addListener(function handler(msg, sender, sendResponse) {
+            if (msg?.type === 'BASE_URL_RESPONSE' && msg.url) {
+                clearInterval(interval);
+                resolve(msg.url);
+                api.runtime.onMessage.removeListener(handler);
+            }
+        });
+    });
+});
+let _cachedBaseUrl = null;
+
+async function getBaseUrl() {
+    if (_cachedBaseUrl) return _cachedBaseUrl;
+    _cachedBaseUrl = await apiBasePromise;
+    console.log('[CompanyApiClient] Base URL resolved:', _cachedBaseUrl);
+    return _cachedBaseUrl;
+}
+
 export class CompanyApiClient {
     constructor() {
         this._storage = new BrowserStorage('preferences');
@@ -152,8 +190,7 @@ export class CompanyApiClient {
         return response;
     }
     async _getBaseUrl() {
-        const prefs = await this._storage.get();
-        return (prefs && prefs.base_url) ? prefs.base_url : CONFIG.DEFAULT_BASE_URL;
+        return getBaseUrl();
     }
 
 
